@@ -1,0 +1,184 @@
+{
+  "commonAccessories": {
+    "pto": {
+      "name": "Power Take-Off (PTO)",
+      "price": 2500,
+      "compatible": ["Dump Body", "Tow & Recovery", "Bucket", "Contractor Body"],
+      "description": "Hydraulic PTO system for powering body equipment"
+    },
+    "beaconLights": {
+      "name": "Beacon/Warning Lights Package",
+      "price": 1200,
+      "compatible": "all",
+      "options": [
+        { "id": "amber", "name": "Amber LED", "price": 1200 },
+        { "id": "amberWhite", "name": "Amber/White LED", "price": 1400 },
+        { "id": "multicolor", "name": "Multi-Color LED", "price": 1800 }
+      ]
+    },
+    "cameraKit": {
+      "name": "360° Camera System",
+      "price": 3500,
+      "compatible": "all",
+      "description": "Birds-eye view camera system with recording"
+    },
+    "safetyPackage": {
+      "name": "Advanced Safety Package",
+      "price": 2800,
+      "compatible": "all",
+      "includes": ["Backup alarm", "Side object detection", "Work lights", "Reflective striping"]
+    },
+    "graphics": {
+      "name": "Custom Graphics/Wrap",
+      "price": 3500,
+      "compatible": "all",
+      "options": [
+        { "id": "partial", "name": "Partial Wrap", "price": 2500 },
+        { "id": "full", "name": "Full Wrap", "price": 4500 },
+        { "id": "lettering", "name": "Vinyl Lettering", "price": 800 }
+      ]
+    },
+    "toolBoxes": {
+      "name": "Tool Storage Solutions",
+      "price": 2200,
+      "compatible": ["Flatbed", "Dump Body", "Tow & Recovery"],
+      "options": [
+        { "id": "underbody", "name": "Underbody Boxes", "price": 2200 },
+        { "id": "side", "name": "Side Mount Boxes", "price": 1800 },
+        { "id": "top", "name": "Top Mount Boxes", "price": 1500 }
+      ]
+    },
+    "ladderRack": {
+      "name": "Ladder/Material Rack",
+      "price": 1800,
+      "compatible": ["Contractor Body", "Service Body", "Flatbed"],
+      "options": [
+        { "id": "standard", "name": "Standard Rack", "price": 1800 },
+        { "id": "heavyDuty", "name": "Heavy Duty Rack", "price": 2400 },
+        { "id": "dropDown", "name": "Drop Down Rack", "price": 3200 }
+      ]
+    },
+    "powerInverter": {
+      "name": "Power Inverter System",
+      "price": 2800,
+      "compatible": "all",
+      "options": [
+        { "id": "2000w", "name": "2000W Inverter", "price": 2800 },
+        { "id": "3000w", "name": "3000W Inverter", "price": 3500 },
+        { "id": "5000w", "name": "5000W Inverter", "price": 4800 }
+      ]
+    },
+    "workLights": {
+      "name": "LED Work Light Package",
+      "price": 1500,
+      "compatible": "all",
+      "options": [
+        { "id": "basic", "name": "Basic (4 lights)", "price": 1500 },
+        { "id": "enhanced", "name": "Enhanced (8 lights)", "price": 2200 },
+        { "id": "premium", "name": "Premium (12 lights)", "price": 3000 }
+      ]
+    },
+    "auxiliaryFuel": {
+      "name": "Auxiliary Fuel Tank",
+      "price": 2500,
+      "compatible": ["Contractor Body", "Service Body", "Tow & Recovery"],
+      "options": [
+        { "id": "40gal", "name": "40 Gallon", "price": 2500 },
+        { "id": "60gal", "name": "60 Gallon", "price": 3200 },
+        { "id": "80gal", "name": "80 Gallon", "price": 3800 }
+      ]
+    },
+    "snowPlowPrep": {
+      "name": "Snow Plow Prep Package",
+      "price": 1800,
+      "compatible": ["F-350", "F-450", "F-550"],
+      "description": "Heavy duty springs, alternator, and wiring for plow"
+    },
+    "fifthWheel": {
+      "name": "Fifth Wheel/Gooseneck Prep",
+      "price": 600,
+      "compatible": ["Flatbed"],
+      "description": "Reinforced bed and prep for fifth wheel or gooseneck hitch"
+    },
+    "liftgate": {
+      "name": "Liftgate (Standalone)",
+      "price": 4500,
+      "compatible": ["Dry Freight Body"],
+      "options": [
+        { "id": "tuckaway", "name": "Tuckaway", "price": 4500 },
+        { "id": "railgate", "name": "Rail Gate", "price": 5200 },
+        { "id": "cantilever", "name": "Cantilever", "price": 5800 }
+      ]
+    },
+    "airCompressor": {
+      "name": "Onboard Air Compressor",
+      "price": 3200,
+      "compatible": ["Contractor Body", "Service Body"],
+      "options": [
+        { "id": "standard", "name": "Standard (30 CFM)", "price": 3200 },
+        { "id": "heavy", "name": "Heavy Duty (60 CFM)", "price": 4500 }
+      ]
+    },
+    "crane": {
+      "name": "Crane/Hoist System",
+      "price": 8500,
+      "compatible": ["Contractor Body", "Service Body", "Flatbed"],
+      "options": [
+        { "id": "3000lb", "name": "3,000 lb Capacity", "price": 8500 },
+        { "id": "5000lb", "name": "5,000 lb Capacity", "price": 12000 },
+        { "id": "8000lb", "name": "8,000 lb Capacity", "price": 16000 }
+      ]
+    },
+    "telematics": {
+      "name": "Fleet Telematics System",
+      "price": 1200,
+      "compatible": "all",
+      "description": "GPS tracking, diagnostics, and driver behavior monitoring"
+    },
+    "upfitWarranty": {
+      "name": "Extended Upfit Warranty",
+      "price": 1800,
+      "compatible": "all",
+      "options": [
+        { "id": "2year", "name": "2 Year/100k miles", "price": 1800 },
+        { "id": "3year", "name": "3 Year/150k miles", "price": 2800 },
+        { "id": "5year", "name": "5 Year/200k miles", "price": 4500 }
+      ]
+    }
+  },
+  "chassisOptions": {
+    "dualRearWheels": {
+      "name": "Dual Rear Wheels (DRW)",
+      "price": 1200,
+      "series": ["F-350", "F-450", "F-550", "F-600"]
+    },
+    "limitedSlipDifferential": {
+      "name": "Limited Slip Differential",
+      "price": 450,
+      "series": "all"
+    },
+    "blockHeater": {
+      "name": "Engine Block Heater",
+      "price": 125,
+      "powertrains": ["diesel"]
+    },
+    "auxiliaryTransCooler": {
+      "name": "Auxiliary Transmission Cooler",
+      "price": 350,
+      "series": "all"
+    },
+    "highCapacityAlternator": {
+      "name": "High Capacity Alternator",
+      "price": 650,
+      "options": [
+        { "id": "240amp", "name": "240 Amp", "price": 650 },
+        { "id": "397amp", "name": "397 Amp", "price": 950 }
+      ]
+    },
+    "auxiliarySwitch": {
+      "name": "Upfitter Auxiliary Switches",
+      "price": 250,
+      "series": "all"
+    }
+  }
+}

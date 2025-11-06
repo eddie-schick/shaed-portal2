@@ -1,0 +1,486 @@
+[
+  {
+    "id": "ord_zltq16",
+    "dealerCode": "DEMO",
+    "upfitterId": "knapheide-detroit",
+    "status": "CONFIG_RECEIVED",
+    "oemEta": null,
+    "upfitterEta": null,
+    "deliveryEta": null,
+    "buildJson": {
+      "bodyType": "Dry Freight Body",
+      "manufacturer": "Morgan Truck Body",
+      "chassis": {
+        "series": "F-450",
+        "cab": "Regular Cab",
+        "drivetrain": "4x2",
+        "wheelbase": "164",
+        "gvwr": "",
+        "powertrain": "gas-7.3L"
+      },
+      "bodySpecs": {
+        "bedLength": "16",
+        "material": "Aluminum",
+        "sideHeight": "24",
+        "hoistType": "Scissor",
+        "length": "10",
+        "height": "84",
+        "doorType": "Roll-up"
+      },
+      "upfitter": {
+        "id": "knapheide-detroit"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 48000,
+      "bodyPrice": 11000,
+      "optionsPrice": 0,
+      "labor": 1500,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 5425,
+      "total": 67425
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-23T23:11:23.540Z",
+    "updatedAt": "2025-09-23T23:11:23.540Z"
+  },
+  {
+    "id": "ord_q3s0fy",
+    "dealerCode": "DEMO",
+    "upfitterId": "knapheide-detroit",
+    "status": "CONFIG_RECEIVED",
+    "oemEta": null,
+    "upfitterEta": null,
+    "deliveryEta": null,
+    "buildJson": {
+      "bodyType": "Dump Body",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-450",
+        "cab": "Regular Cab",
+        "drivetrain": "4x2",
+        "wheelbase": "192",
+        "gvwr": "",
+        "powertrain": "diesel-6.7L"
+      },
+      "bodySpecs": {
+        "bedLength": "10",
+        "material": "Aluminum",
+        "sideHeight": "36",
+        "hoistType": "Telescopic",
+        "type": "Type I",
+        "moduleLength": "144",
+        "equipment": "Basic Life Support",
+        "length": "26",
+        "height": "102",
+        "doorType": "Swing",
+        "interiorOptions": "Logistics Posts"
+      },
+      "upfitter": {
+        "id": "knapheide-detroit"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 56000,
+      "bodyPrice": 12000,
+      "optionsPrice": 2500,
+      "labor": 1800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 6458,
+      "total": 80258
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-23T22:26:14.554Z",
+    "updatedAt": "2025-09-23T22:26:14.554Z"
+  },
+  {
+    "id": "ord_ctuj5m",
+    "dealerCode": "DEMO",
+    "upfitterId": null,
+    "status": "CONFIG_RECEIVED",
+    "oemEta": null,
+    "upfitterEta": null,
+    "deliveryEta": null,
+    "buildJson": {
+      "bodyType": "Dry Freight Body",
+      "manufacturer": null,
+      "chassis": {
+        "series": "F-450",
+        "cab": null,
+        "drivetrain": null,
+        "wheelbase": "",
+        "gvwr": "",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": "14",
+        "height": "96",
+        "doorType": "Swing",
+        "interiorOptions": "Logistics Posts"
+      },
+      "upfitter": {}
+    },
+    "pricingJson": {
+      "chassisMsrp": 48000,
+      "bodyPrice": 15000,
+      "optionsPrice": 0,
+      "labor": 1500,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 5775,
+      "total": 71775
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-23T20:48:49.328Z",
+    "updatedAt": "2025-09-23T20:48:49.328Z"
+  },
+  {
+    "id": "ord_demo01",
+    "dealerCode": "CVC001",
+    "upfitterId": null,
+    "status": "OEM_PRODUCTION",
+    "oemEta": "2025-10-23",
+    "upfitterEta": null,
+    "deliveryEta": null,
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-23T20:47:32.127Z"
+  },
+  {
+    "id": "ord_demo02",
+    "dealerCode": "CVC002",
+    "upfitterId": null,
+    "status": "OEM_ALLOCATED",
+    "oemEta": "2025-10-18T19:40:23.608Z",
+    "upfitterEta": null,
+    "deliveryEta": null,
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": true,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  },
+  {
+    "id": "ord_demo03",
+    "dealerCode": "CVC003",
+    "upfitterId": null,
+    "status": "OEM_PRODUCTION",
+    "oemEta": "2025-10-13T19:40:23.608Z",
+    "upfitterEta": null,
+    "deliveryEta": null,
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  },
+  {
+    "id": "ord_demo04",
+    "dealerCode": "CVC004",
+    "upfitterId": null,
+    "status": "OEM_IN_TRANSIT",
+    "oemEta": "2025-10-03T19:40:23.608Z",
+    "upfitterEta": "2025-10-13T19:40:23.608Z",
+    "deliveryEta": "2025-10-28T19:40:23.608Z",
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": true,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  },
+  {
+    "id": "ord_demo05",
+    "dealerCode": "CVC005",
+    "upfitterId": null,
+    "status": "AT_UPFITTER",
+    "oemEta": "2025-09-18T19:40:23.608Z",
+    "upfitterEta": "2025-10-03T19:40:23.608Z",
+    "deliveryEta": "2025-10-18T19:40:23.608Z",
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  },
+  {
+    "id": "ord_demo06",
+    "dealerCode": "CVC006",
+    "upfitterId": null,
+    "status": "UPFIT_IN_PROGRESS",
+    "oemEta": "2025-09-13T19:40:23.608Z",
+    "upfitterEta": "2025-09-28T19:40:23.608Z",
+    "deliveryEta": "2025-10-13T19:40:23.608Z",
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": true,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  },
+  {
+    "id": "ord_demo07",
+    "dealerCode": "CVC007",
+    "upfitterId": null,
+    "status": "READY_FOR_DELIVERY",
+    "oemEta": "2025-09-08T19:40:23.608Z",
+    "upfitterEta": "2025-09-18T19:40:23.608Z",
+    "deliveryEta": "2025-09-28T19:40:23.608Z",
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": true,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  },
+  {
+    "id": "ord_demo08",
+    "dealerCode": "CVC008",
+    "upfitterId": null,
+    "status": "DELIVERED",
+    "oemEta": "2025-08-14T19:40:23.608Z",
+    "upfitterEta": "2025-08-29T19:40:23.608Z",
+    "deliveryEta": "2025-09-13T19:40:23.608Z",
+    "buildJson": {
+      "bodyType": "Flatbed/Stake/Platform",
+      "manufacturer": "Rugby Manufacturing",
+      "chassis": {
+        "series": "F-550",
+        "cab": "Crew Cab",
+        "drivetrain": "4x4",
+        "wheelbase": "169",
+        "gvwr": "19500",
+        "powertrain": "Gas"
+      },
+      "bodySpecs": {
+        "length": 12,
+        "material": "Steel"
+      },
+      "upfitter": {
+        "id": "u_demo",
+        "name": "Demo Upfits"
+      }
+    },
+    "pricingJson": {
+      "chassisMsrp": 64500,
+      "bodyPrice": 21500,
+      "optionsPrice": 2500,
+      "labor": 3800,
+      "freight": 1500,
+      "incentives": [],
+      "taxes": 0,
+      "total": 91800
+    },
+    "isStock": false,
+    "listingStatus": null,
+    "createdAt": "2025-09-16T19:40:23.608Z",
+    "updatedAt": "2025-09-22T19:40:23.608Z"
+  }
+]

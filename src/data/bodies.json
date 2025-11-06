@@ -1,0 +1,174 @@
+{
+  "bodyTypes": {
+    "Flatbed": {
+      "basePrice": {
+        "8": 8500,
+        "10": 9500,
+        "12": 10500,
+        "14": 11500,
+        "16": 12500,
+        "18": 14000,
+        "20": 15500
+      },
+      "specifications": {
+        "bedLength": [8, 10, 12, 14, 16, 18, 20],
+        "material": ["Steel", "Aluminum", "Wood"],
+        "sideOptions": ["None", "Stake Sides", "Solid Sides"],
+        "accessories": ["headacheRack", "tieDowns", "toolBoxes", "sideRails"]
+      },
+      "laborHours": 8
+    },
+    "Dump Body": {
+      "basePrice": {
+        "8": 12000,
+        "10": 14000,
+        "12": 16000,
+        "14": 18000,
+        "16": 20000
+      },
+      "specifications": {
+        "bedLength": [8, 10, 12, 14, 16],
+        "material": ["Steel", "Aluminum", "Stainless Steel"],
+        "sideHeight": [24, 36, 48, 60],
+        "hoistType": ["Scissor", "Telescopic", "Dual Piston"],
+        "accessories": ["tarpKit", "cabShield", "highLift", "powerTarp"]
+      },
+      "laborHours": 12
+    },
+    "Dry Freight Body": {
+      "basePrice": {
+        "10": 11000,
+        "12": 13000,
+        "14": 15000,
+        "16": 17000,
+        "18": 19000,
+        "20": 21000,
+        "22": 23000,
+        "24": 25000,
+        "26": 27000
+      },
+      "specifications": {
+        "length": [10, 12, 14, 16, 18, 20, 22, 24, 26],
+        "height": [84, 90, 96, 102],
+        "doorType": ["Roll-up", "Swing", "Roll-up with Side Door"],
+        "interiorOptions": ["E-Track", "Logistics Posts", "Shelving"],
+        "accessories": ["interiorLighting", "translucent Roof", "loadRamp"]
+      },
+      "laborHours": 10
+    },
+    "Refrigerated Body": {
+      "basePrice": {
+        "12": 25000,
+        "14": 28000,
+        "16": 31000,
+        "18": 34000,
+        "20": 37000,
+        "22": 40000,
+        "24": 43000
+      },
+      "specifications": {
+        "length": [12, 14, 16, 18, 20, 22, 24],
+        "height": [84, 90, 96, 102],
+        "insulationPackage": ["R-28 Standard", "R-35 Enhanced", "R-42 Premium"],
+        "reeferUnit": ["Carrier Supra 850", "Carrier Supra 950", "Thermo King T-680", "Thermo King T-880"],
+        "tempRange": ["Fresh (35-45°F)", "Frozen (-10-0°F)", "Deep Frozen (-20--10°F)"],
+        "accessories": ["standbyPower", "multiTemp", "liftgate", "meatRails"]
+      },
+      "laborHours": 16
+    },
+    "Tow & Recovery": {
+      "basePrice": {
+        "16": 35000,
+        "19": 42000,
+        "21": 48000,
+        "24": 55000
+      },
+      "specifications": {
+        "deckLength": [16, 19, 21, 24],
+        "winchCapacity": ["8,000 lbs", "10,000 lbs", "12,000 lbs", "15,000 lbs"],
+        "wheelLift": ["Standard 3,500 lbs", "Heavy Duty 6,000 lbs", "Super Duty 8,000 lbs"],
+        "accessories": ["toolBoxes", "lightBar", "wheelLiftExtensions", "remoteControl", "underReach"]
+      },
+      "laborHours": 20
+    },
+    "Bucket": {
+      "basePrice": {
+        "35": 65000,
+        "40": 75000,
+        "45": 85000,
+        "50": 95000,
+        "55": 105000,
+        "60": 115000
+      },
+      "specifications": {
+        "workingHeight": [35, 40, 45, 50, 55, 60],
+        "sideReach": [29, 34, 39, 44, 49, 54],
+        "insulated": ["Non-Insulated", "46kV Insulated", "69kV Insulated"],
+        "bucketCapacity": ["300 lbs", "400 lbs", "500 lbs"],
+        "accessories": ["outriggers", "materialHandler", "platformRotation", "bucketLiner", "fallProtection"]
+      },
+      "laborHours": 24
+    },
+    "Contractor Body": {
+      "basePrice": {
+        "8": 14000,
+        "9": 15500,
+        "11": 17000,
+        "14": 19000
+      },
+      "specifications": {
+        "bedLength": [8, 9, 11, 14],
+        "compartments": ["3+3", "4+4", "5+5", "6+6"],
+        "ladderRack": ["Standard", "Heavy Duty", "Drop Down"],
+        "accessories": ["craneReady", "compressor", "welder", "powerInverter", "underbodyBoxes", "topBoxes"]
+      },
+      "laborHours": 14
+    },
+    "Box w/ Lift Gate": {
+      "basePrice": {
+        "12": 18000,
+        "14": 20000,
+        "16": 22000,
+        "18": 24000,
+        "20": 26000
+      },
+      "specifications": {
+        "boxLength": [12, 14, 16, 18, 20],
+        "boxHeight": [84, 90, 96, 102],
+        "liftgateType": ["Tuckaway", "Rail Gate", "Cantilever"],
+        "liftgateCapacity": ["2,500 lbs", "3,300 lbs", "4,000 lbs", "5,500 lbs"],
+        "accessories": ["cartStop", "loadLights", "remoteControl"]
+      },
+      "laborHours": 12
+    },
+    "Service Body": {
+      "basePrice": {
+        "8": 13000,
+        "9": 14500,
+        "11": 16000,
+        "14": 18000
+      },
+      "specifications": {
+        "bodyLength": [8, 9, 11, 14],
+        "compartments": ["3+3", "4+4", "5+5", "6+6"],
+        "material": ["Steel", "Aluminum", "Stainless Steel"],
+        "accessories": ["ladderRack", "craneReady", "compressor", "drawer Units", "topBoxes"]
+      },
+      "laborHours": 12
+    },
+    "Ambulance": {
+      "basePrice": {
+        "Type I": 125000,
+        "Type II": 95000,
+        "Type III": 115000
+      },
+      "specifications": {
+        "type": ["Type I", "Type II", "Type III"],
+        "moduleLength": [144, 156, 168],
+        "equipment": ["Basic Life Support", "Advanced Life Support", "Critical Care"],
+        "accessories": ["powerLoad", "liquidSpring", "nightScan", "oxygenSystem"]
+      },
+      "laborHours": 40
+    }
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "chassis": [
+    {
+      "series": "F-350",
+      "class": "Class 3",
+      "gvwr": "12000-14000",
+      "trims": [
+        {
+          "id": "f350-regular-4x2",
+          "cab": "Regular Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [142, 164],
+          "suspensionPackages": ["Standard", "Heavy Service"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 42000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 50000 }
+          ]
+        },
+        {
+          "id": "f350-supercab-4x2",
+          "cab": "SuperCab",
+          "drivetrain": "4x2",
+          "wheelbases": [164, 176],
+          "suspensionPackages": ["Standard", "Heavy Service"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 44000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 52000 }
+          ]
+        },
+        {
+          "id": "f350-crew-4x2",
+          "cab": "Crew Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [176, 179],
+          "suspensionPackages": ["Standard", "Heavy Service"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 46000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 54000 }
+          ]
+        },
+        {
+          "id": "f350-regular-4x4",
+          "cab": "Regular Cab",
+          "drivetrain": "4x4",
+          "wheelbases": [142, 164],
+          "suspensionPackages": ["Standard", "Heavy Service", "Snow Plow Prep"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 45000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 53000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Flatbed", "Dump Body", "Service Body", "Contractor Body"]
+    },
+    {
+      "series": "F-450",
+      "class": "Class 4",
+      "gvwr": "14000-16500",
+      "trims": [
+        {
+          "id": "f450-regular-4x2",
+          "cab": "Regular Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [164, 192],
+          "suspensionPackages": ["Standard", "Heavy Service", "Max Payload"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 48000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 56000 }
+          ]
+        },
+        {
+          "id": "f450-crew-4x2",
+          "cab": "Crew Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [179, 203],
+          "suspensionPackages": ["Standard", "Heavy Service", "Max Payload"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 52000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 60000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Flatbed", "Dump Body", "Dry Freight Body", "Refrigerated Body", "Tow & Recovery", "Contractor Body", "Box w/ Lift Gate"]
+    },
+    {
+      "series": "F-550",
+      "class": "Class 5",
+      "gvwr": "17500-19500",
+      "trims": [
+        {
+          "id": "f550-regular-4x2",
+          "cab": "Regular Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [164, 192, 204],
+          "suspensionPackages": ["Standard", "Heavy Service", "Max Payload", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 52000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 60000 }
+          ]
+        },
+        {
+          "id": "f550-crew-4x2",
+          "cab": "Crew Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [179, 203, 215],
+          "suspensionPackages": ["Standard", "Heavy Service", "Max Payload", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 56000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 64000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Flatbed", "Dump Body", "Dry Freight Body", "Refrigerated Body", "Tow & Recovery", "Bucket", "Contractor Body", "Box w/ Lift Gate"]
+    },
+    {
+      "series": "F-600",
+      "class": "Class 6",
+      "gvwr": "22000",
+      "trims": [
+        {
+          "id": "f600-regular-4x2",
+          "cab": "Regular Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [192, 204, 252],
+          "suspensionPackages": ["Heavy Service", "Max Payload", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 58000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 66000 }
+          ]
+        },
+        {
+          "id": "f600-crew-4x2",
+          "cab": "Crew Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [203, 215, 252],
+          "suspensionPackages": ["Heavy Service", "Max Payload", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 62000 },
+            { "id": "diesel-6.7L", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 70000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Flatbed", "Dump Body", "Dry Freight Body", "Refrigerated Body", "Tow & Recovery", "Bucket", "Contractor Body", "Box w/ Lift Gate"]
+    },
+    {
+      "series": "F-650",
+      "class": "Class 6/7",
+      "gvwr": "25600-29000",
+      "trims": [
+        {
+          "id": "f650-regular-4x2",
+          "cab": "Regular Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [203, 215, 252],
+          "suspensionPackages": ["Heavy Service", "Max Payload", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L-md", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 68000 },
+            { "id": "diesel-6.7L-md", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 76000 }
+          ]
+        },
+        {
+          "id": "f650-crew-4x2",
+          "cab": "Crew Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [215, 252],
+          "suspensionPackages": ["Heavy Service", "Max Payload", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L-md", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 72000 },
+            { "id": "diesel-6.7L-md", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 80000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Flatbed", "Dry Freight Body", "Refrigerated Body", "Bucket", "Contractor Body", "Box w/ Lift Gate"]
+    },
+    {
+      "series": "F-750",
+      "class": "Class 7",
+      "gvwr": "up to 37000",
+      "trims": [
+        {
+          "id": "f750-regular-4x2",
+          "cab": "Regular Cab",
+          "drivetrain": "4x2",
+          "wheelbases": [215, 252],
+          "suspensionPackages": ["Heavy Service", "Severe Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L-md", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 73000 },
+            { "id": "diesel-6.7L-md", "type": "diesel", "name": "6.7L PowerStroke Diesel", "basePrice": 82000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Flatbed", "Bucket"]
+    },
+    {
+      "series": "E-350",
+      "class": "Class 3",
+      "gvwr": "10050-12700",
+      "trims": [
+        {
+          "id": "e350-regular-rwd",
+          "cab": "Regular Cab",
+          "drivetrain": "RWD",
+          "wheelbases": [138, 158, 176],
+          "suspensionPackages": ["Standard", "Heavy Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L-e", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 39000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Dry Freight Body", "Refrigerated Body"]
+    },
+    {
+      "series": "E-450",
+      "class": "Class 4",
+      "gvwr": "14000-14500",
+      "trims": [
+        {
+          "id": "e450-regular-rwd",
+          "cab": "Regular Cab",
+          "drivetrain": "RWD",
+          "wheelbases": [158, 176],
+          "suspensionPackages": ["Standard", "Heavy Duty"],
+          "powertrains": [
+            { "id": "gas-7.3L-e", "type": "gas", "name": "7.3L V8 Gas", "basePrice": 43000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Dry Freight Body", "Refrigerated Body"]
+    },
+    {
+      "series": "Transit",
+      "class": "Class 2B",
+      "gvwr": "9000-10360",
+      "trims": [
+        {
+          "id": "transit-350-lwb",
+          "cab": "Standard",
+          "drivetrain": "RWD",
+          "wheelbases": [148],
+          "suspensionPackages": ["Standard"],
+          "powertrains": [
+            { "id": "gas-3.5L", "type": "gas", "name": "3.5L PFDi V6", "basePrice": 38000 }
+          ]
+        },
+        {
+          "id": "transit-350-elwb",
+          "cab": "Standard",
+          "drivetrain": "RWD",
+          "wheelbases": [148],
+          "suspensionPackages": ["Standard", "Heavy Duty"],
+          "powertrains": [
+            { "id": "gas-3.5L", "type": "gas", "name": "3.5L PFDi V6", "basePrice": 40000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Dry Freight Body", "Refrigerated Body"]
+    },
+    {
+      "series": "E-Transit",
+      "class": "Class 2B Electric",
+      "gvwr": "9500-10360",
+      "trims": [
+        {
+          "id": "etransit-350-lwb",
+          "cab": "Standard",
+          "drivetrain": "RWD",
+          "wheelbases": [148],
+          "suspensionPackages": ["Standard"],
+          "powertrains": [
+            { "id": "ev-68kwh", "type": "ev", "name": "68 kWh Battery", "basePrice": 52000 }
+          ]
+        }
+      ],
+      "compatibleBodies": ["Dry Freight Body", "Refrigerated Body"]
+    }
+  ],
+  "compatibility": {
+    "wheelbaseBodyLength": {
+      "142": { "minLength": 8, "maxLength": 12 },
+      "148": { "minLength": 10, "maxLength": 14 },
+      "164": { "minLength": 10, "maxLength": 14 },
+      "176": { "minLength": 12, "maxLength": 16 },
+      "179": { "minLength": 12, "maxLength": 18 },
+      "192": { "minLength": 14, "maxLength": 18 },
+      "203": { "minLength": 16, "maxLength": 20 },
+      "204": { "minLength": 16, "maxLength": 20 },
+      "215": { "minLength": 18, "maxLength": 22 },
+      "252": { "minLength": 20, "maxLength": 26 }
+    }
+  }
+}

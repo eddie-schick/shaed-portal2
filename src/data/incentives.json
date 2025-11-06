@@ -1,0 +1,206 @@
+{
+  "incentives": [
+    {
+      "id": "ev-federal-tax-credit",
+      "name": "Federal EV Tax Credit",
+      "type": "tax_credit",
+      "amount": 7500,
+      "conditions": {
+        "powertrain": ["ev"],
+        "description": "Federal tax credit for new electric vehicles"
+      }
+    },
+    {
+      "id": "ev-state-rebate-ca",
+      "name": "California Clean Vehicle Rebate",
+      "type": "rebate",
+      "amount": 4500,
+      "conditions": {
+        "powertrain": ["ev"],
+        "states": ["CA"],
+        "description": "California state rebate for zero-emission vehicles"
+      }
+    },
+    {
+      "id": "ev-state-rebate-ny",
+      "name": "New York Drive Clean Rebate",
+      "type": "rebate",
+      "amount": 2000,
+      "conditions": {
+        "powertrain": ["ev"],
+        "states": ["NY"],
+        "description": "New York state rebate for electric vehicles"
+      }
+    },
+    {
+      "id": "fleet-volume-5",
+      "name": "Fleet Purchase Discount (5+ units)",
+      "type": "discount",
+      "amount": 1500,
+      "conditions": {
+        "minUnits": 5,
+        "description": "Volume discount for fleet purchases of 5 or more units"
+      }
+    },
+    {
+      "id": "fleet-volume-10",
+      "name": "Fleet Purchase Discount (10+ units)",
+      "type": "discount",
+      "amount": 2500,
+      "conditions": {
+        "minUnits": 10,
+        "description": "Volume discount for fleet purchases of 10 or more units"
+      }
+    },
+    {
+      "id": "fleet-volume-25",
+      "name": "Fleet Purchase Discount (25+ units)",
+      "type": "discount",
+      "amount": 4000,
+      "conditions": {
+        "minUnits": 25,
+        "description": "Volume discount for fleet purchases of 25 or more units"
+      }
+    },
+    {
+      "id": "commercial-upfit-rebate",
+      "name": "Commercial Upfit Rebate",
+      "type": "rebate",
+      "amount": 1000,
+      "conditions": {
+        "requiresUpfit": true,
+        "series": ["F-350", "F-450", "F-550", "F-600"],
+        "description": "Rebate for commercial chassis with qualified upfit"
+      }
+    },
+    {
+      "id": "municipal-discount",
+      "name": "Municipal/Government Discount",
+      "type": "discount",
+      "amount": 2000,
+      "conditions": {
+        "customerType": ["municipal", "government"],
+        "description": "Special pricing for municipal and government fleets"
+      }
+    },
+    {
+      "id": "first-responder-discount",
+      "name": "First Responder Discount",
+      "type": "discount",
+      "amount": 1500,
+      "conditions": {
+        "customerType": ["fire", "ems", "police"],
+        "bodyTypes": ["Ambulance"],
+        "description": "Discount for first responder vehicles"
+      }
+    },
+    {
+      "id": "vocational-financing",
+      "name": "0% APR Vocational Financing",
+      "type": "financing",
+      "amount": 0,
+      "apr": 0,
+      "termMonths": 60,
+      "conditions": {
+        "series": ["F-450", "F-550", "F-600"],
+        "creditTier": ["tier1", "tier2"],
+        "description": "0% APR for 60 months on select vocational trucks"
+      }
+    },
+    {
+      "id": "diesel-bonus-cash",
+      "name": "PowerStroke Diesel Bonus Cash",
+      "type": "rebate",
+      "amount": 1250,
+      "conditions": {
+        "powertrain": ["diesel"],
+        "series": ["F-450", "F-550", "F-600"],
+        "description": "Bonus cash for PowerStroke diesel engine selection"
+      }
+    },
+    {
+      "id": "construction-industry-rebate",
+      "name": "Construction Industry Rebate",
+      "type": "rebate",
+      "amount": 1500,
+      "conditions": {
+        "vocation": ["Construction"],
+        "bodyTypes": ["Dump Body", "Contractor Body", "Flatbed"],
+        "description": "Special rebate for construction industry purchases"
+      }
+    },
+    {
+      "id": "utility-fleet-incentive",
+      "name": "Utility Fleet Incentive",
+      "type": "discount",
+      "amount": 3000,
+      "conditions": {
+        "customerType": ["utility"],
+        "bodyTypes": ["Bucket", "Service Body"],
+        "description": "Incentive for utility company fleet purchases"
+      }
+    },
+    {
+      "id": "trade-in-bonus",
+      "name": "Competitive Trade-In Bonus",
+      "type": "rebate",
+      "amount": 2000,
+      "conditions": {
+        "requiresTradeIn": true,
+        "tradeInAge": 3,
+        "description": "Bonus for trading in competitive brand commercial vehicle (3+ years old)"
+      }
+    },
+    {
+      "id": "early-order-discount",
+      "name": "Early Order Discount",
+      "type": "discount",
+      "amount": 750,
+      "conditions": {
+        "orderTiming": "Q1",
+        "description": "Discount for orders placed in Q1"
+      }
+    },
+    {
+      "id": "loyalty-rebate",
+      "name": "Ford Fleet Loyalty Rebate",
+      "type": "rebate",
+      "amount": 1000,
+      "conditions": {
+        "existingCustomer": true,
+        "description": "Rebate for existing Ford fleet customers"
+      }
+    }
+  ],
+  "financing": {
+    "rates": [
+      {
+        "creditTier": "tier1",
+        "apr": 2.9,
+        "minScore": 740,
+        "termOptions": [36, 48, 60, 72, 84]
+      },
+      {
+        "creditTier": "tier2",
+        "apr": 4.9,
+        "minScore": 680,
+        "termOptions": [36, 48, 60, 72]
+      },
+      {
+        "creditTier": "tier3",
+        "apr": 6.9,
+        "minScore": 620,
+        "termOptions": [36, 48, 60]
+      },
+      {
+        "creditTier": "tier4",
+        "apr": 9.9,
+        "minScore": 580,
+        "termOptions": [36, 48]
+      }
+    ],
+    "defaultDownPayment": 0.2,
+    "maxTermMonths": 84,
+    "commercialLeaseAvailable": true
+  }
+}
