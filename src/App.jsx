@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input.jsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { AspectRatio } from '@/components/ui/aspect-ratio.jsx'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu.jsx'
+import { Toaster } from '@/components/ui/sonner.jsx'
 import UpfitterLogo from './components/UpfitterLogo.jsx'
 // Removed FordProLogo import; using Ford CVC logo from public assets
 import { 
@@ -668,6 +669,7 @@ function App() {
           </Routes>
         </main>
         <Footer />
+        <Toaster />
       </div>
     </Router>
   )

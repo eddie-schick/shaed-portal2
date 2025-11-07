@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Menu } from 'lucide-react'
 
 // Helper to read from localStorage
 function readLocal(key, fallback) {
@@ -91,6 +93,7 @@ export function OrderDetailPage() {
   const [messageText, setMessageText] = useState('')
   const [messageTo, setMessageTo] = useState('Dealer')
   const [activeTab, setActiveTab] = useState('timeline')
+  const [mobileTabSheetOpen, setMobileTabSheetOpen] = useState(false)
 
   const FLOW = ['CONFIG_RECEIVED', 'OEM_ALLOCATED', 'OEM_PRODUCTION', 'OEM_IN_TRANSIT', 'AT_UPFITTER', 'UPFIT_IN_PROGRESS', 'READY_FOR_DELIVERY', 'DELIVERED']
 
@@ -389,7 +392,7 @@ export function OrderDetailPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate('/ordermanagement')}>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate('/ordermanagement?tab=orders')}>
                 Back to Orders
               </Button>
               {nextLabel && (
@@ -530,13 +533,87 @@ export function OrderDetailPage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap h-auto">
+        {/* Mobile: Button to open tab menu */}
+        <div className="sm:hidden mb-4">
+          <Button
+            variant="outline"
+            onClick={() => setMobileTabSheetOpen(true)}
+            className="w-full justify-between"
+          >
+            <span className="capitalize">{activeTab === 'timeline' ? 'Timeline' : activeTab === 'comments' ? 'Comments' : activeTab === 'participants' ? 'Participants' : activeTab === 'operational' ? 'Operational' : 'Analytics'}</span>
+            <Menu className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Desktop: Regular tab list */}
+        <TabsList className="hidden sm:flex flex-wrap h-auto">
           <TabsTrigger value="timeline" className="text-xs sm:text-sm">Timeline</TabsTrigger>
           <TabsTrigger value="comments" className="text-xs sm:text-sm">Comments</TabsTrigger>
           <TabsTrigger value="participants" className="text-xs sm:text-sm">Participants</TabsTrigger>
           <TabsTrigger value="operational" className="text-xs sm:text-sm">Operational</TabsTrigger>
           <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
         </TabsList>
+
+        {/* Mobile: Sheet with tab options */}
+        <Sheet open={mobileTabSheetOpen} onOpenChange={setMobileTabSheetOpen}>
+          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetHeader>
+              <SheetTitle>Select Tab</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 space-y-2">
+              <Button
+                variant={activeTab === 'timeline' ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => {
+                  setActiveTab('timeline')
+                  setMobileTabSheetOpen(false)
+                }}
+              >
+                Timeline
+              </Button>
+              <Button
+                variant={activeTab === 'comments' ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => {
+                  setActiveTab('comments')
+                  setMobileTabSheetOpen(false)
+                }}
+              >
+                Comments
+              </Button>
+              <Button
+                variant={activeTab === 'participants' ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => {
+                  setActiveTab('participants')
+                  setMobileTabSheetOpen(false)
+                }}
+              >
+                Participants
+              </Button>
+              <Button
+                variant={activeTab === 'operational' ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => {
+                  setActiveTab('operational')
+                  setMobileTabSheetOpen(false)
+                }}
+              >
+                Operational
+              </Button>
+              <Button
+                variant={activeTab === 'analytics' ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => {
+                  setActiveTab('analytics')
+                  setMobileTabSheetOpen(false)
+                }}
+              >
+                Analytics
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {/* 🧾 3. Buyer & Seller Information */}
         <TabsContent value="participants" className="space-y-4">

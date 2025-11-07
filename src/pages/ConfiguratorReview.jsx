@@ -18,8 +18,10 @@ import { calculatePricing } from '@/lib/configurationStore'
 import { getChassis, getBodies, getOptions, getIncentives } from '@/api/routes'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Home, RotateCcw } from 'lucide-react'
+import { Home, RotateCcw, CheckCircle2 } from 'lucide-react'
 import { intakeOrder } from '@/lib/orderApi'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 export function ConfiguratorReview() {
   const navigate = useNavigate()
@@ -64,6 +66,7 @@ export function ConfiguratorReview() {
   const [orderSubmitted, setOrderSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
   // Redirect to first incomplete step instead of jumping to step 1 always
   useEffect(() => {
@@ -212,9 +215,18 @@ export function ConfiguratorReview() {
       const payload = mapToIntakePayload()
       await intakeOrder(payload)
       setOrderSubmitted(true)
+      setShowSuccessDialog(true)
+      // Show toast for desktop
+      toast.success('Order submitted successfully!', {
+        description: 'Your order request has been sent to order management.',
+        duration: 5000,
+      })
     } catch (e) {
       console.error('Submit failed', e)
       setSubmitError(e?.message || 'Submit failed')
+      toast.error('Failed to submit order', {
+        description: e?.message || 'Please try again.',
+      })
     } finally {
       setSubmitting(false)
     }
@@ -290,13 +302,57 @@ export function ConfiguratorReview() {
         <StickyActions
           onBack={handleBack}
           onContinue={handleSubmit}
-          continueLabel={submitting ? 'Submitting…' : 'Send to Order Management'}
+          continueLabel={submitting ? 'Submitting…' : 'Submit Order Request'}
           disableContinue={submitting}
         />
       )}
       {submitError && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 text-red-600 text-sm">{submitError}</div>
       )}
+
+      {/* Success Dialog - Optimized for Mobile and Desktop */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center sm:text-left">
+            <div className="flex justify-center sm:justify-start mb-4">
+              <div className="rounded-full bg-green-100 p-3">
+                <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10 text-green-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-center sm:text-left">
+              Order Submitted Successfully!
+            </DialogTitle>
+            <DialogDescription className="text-base sm:text-lg text-center sm:text-left mt-3">
+              Your order request has been sent to order management. A dealer representative will contact you within 24-48 hours to finalize your order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 space-y-3">
+            <Button 
+              onClick={() => {
+                setShowSuccessDialog(false)
+                handleStartNew()
+              }}
+              className="w-full"
+              size="lg"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Start New Configuration
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowSuccessDialog(false)
+                handleReturnHome()
+              }}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Return to Marketplace
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

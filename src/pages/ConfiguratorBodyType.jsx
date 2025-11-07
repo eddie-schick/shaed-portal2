@@ -164,7 +164,7 @@ export function ConfiguratorBodyType() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 order-2 lg:order-1">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -251,7 +251,7 @@ export function ConfiguratorBodyType() {
           </div>
 
           {/* Live Pricing Sidebar */}
-          <div className="lg:w-80 w-full">
+          <div className="lg:w-80 w-full order-1 lg:order-2">
             <LivePricingSidebar configuration={configuration} />
           </div>
         </div>

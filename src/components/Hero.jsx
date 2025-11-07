@@ -91,17 +91,18 @@ export default function Hero({
 	};
 
 	return (
-		<section ref={sectionRef} className="relative isolate w-full" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
+		<section ref={sectionRef} className="relative isolate w-full max-w-full overflow-hidden" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
 			{/* Figure (full-bleed image) with subtle top white gradient overlay and content at the top */}
-			<figure className="relative">
-				<picture>
+			<figure className="relative w-full max-w-full overflow-hidden">
+				<picture className="block w-full max-w-full">
 					<source srcSet="/hero.webp" type="image/webp" />
 					<img
 						src="/hero.webp"
 						alt="Commercial vehicles hero"
-						className="h-[70svh] w-full object-cover object-center md:h-[78svh]"
+						className="h-[70svh] w-full max-w-full object-cover object-center md:h-[78svh]"
 						fetchpriority="high"
 						decoding="async"
+						style={{ maxWidth: '100%', width: '100%' }}
 					/>
 				</picture>
 				{/* Removed gradient overlay to keep original image colors */}

@@ -1,14 +1,13 @@
-import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner";
 
 const Toaster = ({
   ...props
 }) => {
-  const { theme = "system" } = useTheme()
-
+  // Use light theme as default if ThemeProvider is not available
+  // This will work even without next-themes ThemeProvider
   return (
     <Sonner
-      theme={theme}
+      theme="light"
       className="toaster group"
       style={
         {

@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Legend, 
@@ -20,6 +21,16 @@ const COLORS = {
 }
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4']
+
+const DASHBOARD_OPTIONS = [
+  { value: 'executive', label: 'Executive' },
+  { value: 'operations', label: 'Operations' },
+  { value: 'accountability', label: 'Activity' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'buyer', label: 'Buyer' },
+  { value: 'sla', label: 'SLA' },
+  { value: 'financial', label: 'Financial' },
+]
 
 export function OrderDashboards({ orders = [] }) {
   const [activeDashboard, setActiveDashboard] = useState('executive')
@@ -138,7 +149,24 @@ export function OrderDashboards({ orders = [] }) {
   return (
     <div className="space-y-4 sm:space-y-6">
       <Tabs value={activeDashboard} onValueChange={setActiveDashboard}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1 sm:gap-2">
+        {/* Mobile: Dropdown Select */}
+        <div className="sm:hidden mb-4">
+          <Select value={activeDashboard} onValueChange={setActiveDashboard}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Dashboard" />
+            </SelectTrigger>
+            <SelectContent>
+              {DASHBOARD_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop: Regular tab list */}
+        <TabsList className="hidden sm:grid w-full grid-cols-4 lg:grid-cols-7 gap-1 sm:gap-2">
           <TabsTrigger value="executive" className="text-xs sm:text-sm">Executive</TabsTrigger>
           <TabsTrigger value="operations" className="text-xs sm:text-sm">Operations</TabsTrigger>
           <TabsTrigger value="accountability" className="text-xs sm:text-sm">Activity</TabsTrigger>

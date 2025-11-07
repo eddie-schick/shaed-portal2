@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { createPortal } from 'react-dom'
 import { getOrders, getStatusLabel, publishListing, deleteOrders, setDealerWebsiteStatus, reseedDemoData, generateFleetBuyerName } from '@/lib/orderApi'
@@ -11,6 +11,8 @@ import { OrderDashboards } from './OrderDashboards'
 import { toast } from 'sonner'
 
 export function OrdersPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [allOrders, setAllOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -25,6 +27,18 @@ export function OrdersPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [needsAttention, setNeedsAttention] = useState(false)
+
+  // Get active tab from URL parameter, default to 'dashboards'
+  const searchParams = new URLSearchParams(location.search)
+  const tabParam = searchParams.get('tab')
+  const activeTab = (tabParam === 'orders' || tabParam === 'dashboards') ? tabParam : 'dashboards'
+  
+  // Handle tab change - update URL without navigation
+  const handleTabChange = (value) => {
+    const params = new URLSearchParams(location.search)
+    params.set('tab', value)
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true })
+  }
 
   // Local last-resort fallback dataset so the UI always has rows
   const buildLocalFallback = () => {
@@ -940,7 +954,7 @@ export function OrdersPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-16">
-      <Tabs defaultValue="dashboards" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="w-full sm:w-auto justify-start">
           <TabsTrigger value="dashboards" className="flex-1 sm:flex-initial text-xs sm:text-sm">Dashboards</TabsTrigger>
           <TabsTrigger value="orders" className="flex-1 sm:flex-initial text-xs sm:text-sm">My Orders</TabsTrigger>
@@ -1010,53 +1024,53 @@ export function OrdersPage() {
       </div>
 
       <Dialog open={customizeOpen} onOpenChange={(v) => { if (!v) { setCustomizeOpen(false); } else { setCustomizeOpen(true) } }}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <span>Manage Columns</span>
               <span className="text-xs text-gray-500">Available ({(draftColumns||[]).filter(c => !c.visible && c.id !== 'select').length}) · Selected ({(draftColumns||[]).filter(c => c.visible).length})</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-[1fr_auto_1fr] gap-4">
-            <div>
+          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] gap-4 sm:gap-4">
+            <div className="w-full">
               <div className="mb-2">
-                <input className="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Search columns…" value={availQ} onChange={(e) => setAvailQ(e.target.value)} aria-label="Search available columns" />
+                <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search columns…" value={availQ} onChange={(e) => setAvailQ(e.target.value)} aria-label="Search available columns" />
               </div>
-              <div className="border rounded min-h-64 max-h-80 overflow-auto" role="listbox" aria-label="Available columns" tabIndex={0}>
+              <div className="border rounded min-h-[200px] sm:min-h-64 max-h-[300px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Available columns" tabIndex={0}>
                 {draftAvailable.length === 0 ? (
                   <div className="p-3 text-sm text-gray-500">No columns match your search.</div>
                 ) : draftAvailable.map(c => (
-                  <label key={c.id} className={`flex items-center gap-2 p-2 text-sm hover:bg-gray-50 cursor-pointer ${availableSelected.has(c.id)?'bg-blue-50':''}`}
+                  <label key={c.id} className={`flex items-center gap-2 p-3 sm:p-2 text-sm hover:bg-gray-50 cursor-pointer ${availableSelected.has(c.id)?'bg-blue-50':''}`}
                     onClick={() => moveIdsToSelected(new Set([c.id]))}
                     onDoubleClick={() => moveIdsToSelected(new Set([c.id]))}
                     onKeyDown={(e) => { if (e.key==='Enter') moveIdsToSelected(new Set([c.id])) }}
                     tabIndex={0}
                   >
-                    <input type="checkbox" checked={availableSelected.has(c.id)} onChange={() => setAvailableSelected(prev => { const next = new Set(prev); next.has(c.id)?next.delete(c.id):next.add(c.id); return next })} />
+                    <input type="checkbox" className="w-4 h-4 sm:w-auto sm:h-auto" checked={availableSelected.has(c.id)} onChange={() => setAvailableSelected(prev => { const next = new Set(prev); next.has(c.id)?next.delete(c.id):next.add(c.id); return next })} />
                     <span className="truncate" title={c.label || c.id}>{c.label || c.id}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center gap-2">
-              <button className="px-3 py-1 border rounded bg-white disabled:opacity-50" onClick={() => moveIdsToSelected(availableSelected)} disabled={availableSelected.size===0} aria-label="Add to selected">Add →</button>
-              <button className="px-3 py-1 border rounded bg-white disabled:opacity-50" onClick={() => moveIdsToAvailable(selectedSelected)} disabled={selectedSelected.size===0} aria-label="Remove from selected">← Remove</button>
-              <div className="flex items-center gap-3 text-xs mt-2">
-                <button className="text-blue-600 underline" onClick={addAll} type="button">Add all</button>
-                <button className="text-blue-600 underline" onClick={removeAll} type="button">Remove all</button>
+            <div className="flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2 py-2 sm:py-0">
+              <button className="flex-1 sm:flex-initial px-4 py-2.5 sm:px-3 sm:py-1 border rounded bg-white disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0" onClick={() => moveIdsToSelected(availableSelected)} disabled={availableSelected.size===0} aria-label="Add to selected">Add →</button>
+              <button className="flex-1 sm:flex-initial px-4 py-2.5 sm:px-3 sm:py-1 border rounded bg-white disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0" onClick={() => moveIdsToAvailable(selectedSelected)} disabled={selectedSelected.size===0} aria-label="Remove from selected">← Remove</button>
+              <div className="flex items-center gap-4 sm:gap-3 text-sm sm:text-xs mt-0 sm:mt-2 w-full sm:w-auto justify-center sm:justify-start">
+                <button className="text-blue-600 underline py-1" onClick={addAll} type="button">Add all</button>
+                <button className="text-blue-600 underline py-1" onClick={removeAll} type="button">Remove all</button>
               </div>
             </div>
 
-            <div>
+            <div className="w-full">
               <div className="mb-2">
-                <input className="w-full border border-gray-300 rounded px-2 py-1 text-sm" placeholder="Search selected…" value={selQ} onChange={(e) => setSelQ(e.target.value)} aria-label="Search selected columns" />
+                <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search selected…" value={selQ} onChange={(e) => setSelQ(e.target.value)} aria-label="Search selected columns" />
               </div>
-              <div className="border rounded min-h-64 max-h-80 overflow-auto" role="listbox" aria-label="Selected columns" tabIndex={0}>
+              <div className="border rounded min-h-[200px] sm:min-h-64 max-h-[300px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Selected columns" tabIndex={0}>
                 {draftSelected.length === 0 ? (
                   <div className="p-3 text-sm text-gray-500">Choose columns from the left to build your view.</div>
                 ) : draftSelected.map(c => (
-                  <div key={c.id} className={`group flex items-center gap-2 p-2 text-sm hover:bg-gray-50 ${c.id==='select'?'opacity-60':''}`}
+                  <div key={c.id} className={`group flex items-center gap-2 p-3 sm:p-2 text-sm hover:bg-gray-50 ${c.id==='select'?'opacity-60':''}`}
                     draggable
                     onDragStart={() => onSelDragStart(c.id)}
                     onDragOver={(e) => e.preventDefault()}
@@ -1064,13 +1078,13 @@ export function OrdersPage() {
                     onDoubleClick={() => c.id==='select'?null:moveIdsToAvailable(new Set([c.id]))}
                     tabIndex={0}
                   >
-                    <span className="text-gray-400 select-none" title="Drag to reorder" aria-hidden>≡</span>
-                    <input type="checkbox" disabled={c.id==='select'} checked={selectedSelected.has(c.id)} onChange={() => setSelectedSelected(prev => { const next = new Set(prev); next.has(c.id)?next.delete(c.id):next.add(c.id); return next })} aria-label={`Select ${c.label||c.id}`} />
+                    <span className="text-gray-400 select-none text-lg sm:text-base" title="Drag to reorder" aria-hidden>≡</span>
+                    <input type="checkbox" className="w-4 h-4 sm:w-auto sm:h-auto" disabled={c.id==='select'} checked={selectedSelected.has(c.id)} onChange={() => setSelectedSelected(prev => { const next = new Set(prev); next.has(c.id)?next.delete(c.id):next.add(c.id); return next })} aria-label={`Select ${c.label||c.id}`} />
                     <span className="truncate flex-1" title={c.label || c.id}>{c.label || c.id}</span>
-                    <div className="flex items-center gap-1">
-                      <button className={`px-2 py-0.5 text-xs border rounded ${c.pin==='left'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'left')} title="Pin Left" type="button">L</button>
-                      <button className={`px-2 py-0.5 text-xs border rounded ${c.pin==='none'||!c.pin?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'none')} title="Unpin" type="button">•</button>
-                      <button className={`px-2 py-0.5 text-xs border rounded ${c.pin==='right'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'right')} title="Pin Right" type="button">R</button>
+                    <div className="flex items-center gap-1.5 sm:gap-1">
+                      <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='left'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'left')} title="Pin Left" type="button">L</button>
+                      <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='none'||!c.pin?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'none')} title="Unpin" type="button">•</button>
+                      <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='right'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'right')} title="Pin Right" type="button">R</button>
                     </div>
                   </div>
                 ))}
@@ -1078,15 +1092,15 @@ export function OrdersPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={applyInstantly} onChange={(e) => setApplyInstantly(e.target.checked)} />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 pt-4 border-t">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" className="w-4 h-4" checked={applyInstantly} onChange={(e) => setApplyInstantly(e.target.checked)} />
               <span>Apply changes instantly</span>
             </label>
-            <div className="flex items-center gap-2">
-              <button className="px-2 py-1 text-sm border rounded" onClick={resetDraftToDefault} type="button">Reset to default</button>
-              <button className="px-2 py-1 text-sm border rounded" onClick={() => { cancelDraft() }} type="button">Cancel</button>
-              <button className="px-2 py-1 text-sm border rounded bg-blue-600 text-white" onClick={() => { applyFromDraft(); setCustomizeOpen(false); toast('Table view updated.') }} type="button">Save</button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <button className="w-full sm:w-auto px-4 py-2.5 sm:px-2 sm:py-1 text-sm border rounded min-h-[44px] sm:min-h-0" onClick={resetDraftToDefault} type="button">Reset to default</button>
+              <button className="w-full sm:w-auto px-4 py-2.5 sm:px-2 sm:py-1 text-sm border rounded min-h-[44px] sm:min-h-0" onClick={() => { cancelDraft() }} type="button">Cancel</button>
+              <button className="w-full sm:w-auto px-4 py-2.5 sm:px-2 sm:py-1 text-sm border rounded bg-blue-600 text-white font-medium min-h-[44px] sm:min-h-0" onClick={() => { applyFromDraft(); setCustomizeOpen(false); toast('Table view updated.') }} type="button">Save</button>
             </div>
           </div>
         </DialogContent>
