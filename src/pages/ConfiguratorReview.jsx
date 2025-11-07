@@ -171,7 +171,7 @@ export function ConfiguratorReview() {
   }
 
   const handleReturnHome = () => {
-    navigate('/')
+    navigate('/ordermanagement?tab=orders')
   }
 
   const mapToIntakePayload = () => {

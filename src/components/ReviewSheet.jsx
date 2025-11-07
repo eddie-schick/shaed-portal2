@@ -473,20 +473,6 @@ export function ReviewSheet({ configuration }) {
             </Button>
             <Button variant="outline" onClick={() => window.print()}>Print</Button>
           </div>
-          
-          <div className="mt-6 pt-6 border-t">
-            <Button 
-              onClick={handleSubmitOrder}
-              disabled={submitting}
-              className="w-full"
-              size="lg"
-            >
-              {submitting ? 'Submitting...' : 'Submit Order Request'}
-            </Button>
-            <p className="text-xs text-gray-500 text-center mt-2">
-              By submitting, you'll receive a quote from the dealer within 24-48 hours
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
