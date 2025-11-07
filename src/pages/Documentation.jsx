@@ -885,25 +885,6 @@ function DealJacketDetail() {
         </Button>
       </div>
 
-      {/* Progress Bar */}
-      <Card>
-        <CardContent className="pt-4 sm:pt-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-gray-600 font-medium">Document Completion</span>
-              <span className="font-semibold text-base sm:text-lg">{Math.round(progressPercentage)}%</span>
-            </div>
-            <Progress value={progressPercentage} className="h-2 sm:h-3" />
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-gray-500">
-              <span className="break-words">{uploadedRequiredDocs.length} of {allRequiredDocs.length} required documents uploaded</span>
-              {missingCount > 0 && (
-                <span className="text-red-600 font-medium whitespace-nowrap">{missingCount} missing</span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Panel - Deal Information */}
         <Card className="lg:col-span-1 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto order-2 lg:order-1">
