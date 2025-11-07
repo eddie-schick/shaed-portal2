@@ -237,6 +237,11 @@ export function OrdersPage() {
     return () => clearTimeout(handle)
   }, [q])
 
+  // Scroll to top when tab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [activeTab])
+
   useEffect(() => {
     const load = async () => {
       setLoading(true)

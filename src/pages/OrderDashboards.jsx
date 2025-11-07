@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -145,6 +145,11 @@ export function OrderDashboards({ orders = [] }) {
     if (prior === 0) return current > 0 ? 100 : 0
     return Math.round(((current - prior) / prior) * 100)
   }
+
+  // Scroll to top when dashboard tab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [activeDashboard])
 
   return (
     <div className="space-y-4 sm:space-y-6">
