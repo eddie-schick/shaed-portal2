@@ -104,11 +104,16 @@ function Header() {
     { name: 'Documentation', href: '/documentation' },
   ]
 
+  // Function to scroll to top when navigating
+  const handleNavClick = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+
   return (
     <header className="bg-white shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
-          <Link to="/" className="inline-block">
+          <Link to="/" className="inline-block" onClick={handleNavClick}>
             <img src="/SHAED Logo.png" alt="SHAED Portal" className="h-12 md:h-14 lg:h-16 w-auto" />
           </Link>
 
@@ -118,6 +123,7 @@ function Header() {
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={handleNavClick}
                 className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   location.pathname === item.href
                     ? 'text-white'
@@ -163,6 +169,10 @@ function Header() {
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={() => {
+                    setIsMenuOpen(false)
+                    handleNavClick()
+                  }}
                   className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
                     location.pathname === item.href
                       ? 'text-white'
@@ -179,7 +189,6 @@ function Header() {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }
                   }}
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   <span>{item.name}</span>
                 </Link>
@@ -660,11 +669,24 @@ function Footer() {
   )
 }
 
+// ScrollToTop component to scroll to top on route changes
+function ScrollToTop() {
+  const location = useLocation()
+  
+  useEffect(() => {
+    // Scroll to top when route changes
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [location.pathname])
+  
+  return null
+}
+
 // Main App Component
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col">
+        <ScrollToTop />
         <Header />
         <main className="flex-1">
           <Routes>

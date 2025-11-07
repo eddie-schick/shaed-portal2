@@ -242,11 +242,6 @@ export function OrderDetailPage() {
     setRole(r === 'BUYER' ? 'BUYER' : 'INTERNAL')
   }, [])
 
-  // Scroll to top when tab changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [activeTab])
-
   const nextLabel = useMemo(() => {
     if (!order) return null
     const idx = FLOW.indexOf(order.status)

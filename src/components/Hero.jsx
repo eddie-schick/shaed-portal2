@@ -87,6 +87,11 @@ export default function Hero({
 		window.scrollTo({ top: window.scrollY + 1, behavior: "smooth" });
 	};
 
+	// Function to scroll to top when navigating to different pages
+	const handleNavClick = () => {
+		window.scrollTo({ top: 0, behavior: 'instant' });
+	};
+
 	return (
 		<section ref={sectionRef} className="relative isolate w-full max-w-full overflow-hidden" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
 			{/* Figure (full-bleed image) with optimized mobile layout */}
@@ -149,10 +154,10 @@ export default function Hero({
 								<a href="#catalog" onClick={handleExploreClick} aria-label="Explore Catalog">Explore Catalog</a>
 							</Button>
 							<Button asChild size="lg" variant="outline" className="w-full sm:w-auto sm:min-w-40 bg-white text-gray-900 hover:bg-white/90 shadow-lg text-sm sm:text-base py-2.5 sm:py-3">
-								<Link to="/ordermanagement" aria-label="Go to Order Management">Order Management</Link>
+								<Link to="/ordermanagement" onClick={handleNavClick} aria-label="Go to Order Management">Order Management</Link>
 							</Button>
 							<Button asChild size="lg" variant="outline" className="w-full sm:w-auto sm:min-w-40 bg-white text-gray-900 hover:bg-white/90 shadow-lg text-sm sm:text-base py-2.5 sm:py-3">
-								<Link to="/documentation" aria-label="Go to Documentation">Documentation</Link>
+								<Link to="/documentation" onClick={handleNavClick} aria-label="Go to Documentation">Documentation</Link>
 							</Button>
 						</div>
 					</div>

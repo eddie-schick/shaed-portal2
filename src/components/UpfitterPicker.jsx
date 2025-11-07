@@ -119,9 +119,46 @@ export function UpfitterPicker({
         )
       }
       
-      // Filter by body type specialty if available
-      if (bodyType) {
-        // Prioritize upfitters that specialize in this body type
+      // When location is provided, sort by distance first (already done by API), then by specialty
+      // If no location, sort by specialty only
+      if (coords && bodyType) {
+        // Helper function to calculate distance
+        const getDist = (upfitter) => {
+          const R = 3959 // Earth radius in miles
+          const dLat = (upfitter.lat - coords.lat) * Math.PI / 180
+          const dLon = (upfitter.lng - coords.lng) * Math.PI / 180
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(coords.lat * Math.PI / 180) * Math.cos(upfitter.lat * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2)
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+          return Math.round(R * c)
+        }
+        
+        // Secondary sort: prioritize specialists within the same distance range
+        filtered.sort((a, b) => {
+          // Calculate distances for comparison
+          const distA = getDist(a)
+          const distB = getDist(b)
+          
+          // First, sort by distance (should already be sorted, but ensure it)
+          if (Math.abs(distA - distB) > 5) {
+            // If distances differ by more than 5 miles, prioritize distance
+            return distA - distB
+          }
+          
+          // Within similar distance (within 5 miles), prioritize specialists
+          const aSpecializes = a.specialties?.some(s => 
+            s.toLowerCase().includes(bodyType.toLowerCase())
+          )
+          const bSpecializes = b.specialties?.some(s => 
+            s.toLowerCase().includes(bodyType.toLowerCase())
+          )
+          if (aSpecializes && !bSpecializes) return -1
+          if (!aSpecializes && bSpecializes) return 1
+          return 0
+        })
+      } else if (bodyType && !coords) {
+        // No location: sort by specialty only
         filtered.sort((a, b) => {
           const aSpecializes = a.specialties?.some(s => 
             s.toLowerCase().includes(bodyType.toLowerCase())

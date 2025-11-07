@@ -38,15 +38,6 @@ export const getUpfitters = async (params = {}) => {
   await delay(200)
   let filtered = [...upfittersData.upfitters]
   
-  // Filter by location/radius if provided
-  if (params.lat && params.lng && params.radius) {
-    const { lat, lng, radius } = params
-    filtered = filtered.filter(upfitter => {
-      const distance = getDistance(lat, lng, upfitter.lat, upfitter.lng)
-      return distance <= radius
-    })
-  }
-  
   // Filter by certifications
   if (params.certs) {
     const certsArray = params.certs.split(',')
@@ -60,7 +51,7 @@ export const getUpfitters = async (params = {}) => {
     filtered = filtered.filter(upfitter => upfitter.evReady)
   }
   
-  // Sort by distance if location provided
+  // Sort by distance if location provided (don't filter by radius - show all, sorted by distance)
   if (params.lat && params.lng) {
     filtered.sort((a, b) => {
       const distA = getDistance(params.lat, params.lng, a.lat, a.lng)
