@@ -1115,11 +1115,11 @@ export function OrdersPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-16">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList className="w-full sm:w-auto justify-start">
-          <TabsTrigger value="dashboards" className="flex-1 sm:flex-initial text-xs sm:text-sm">Dashboards</TabsTrigger>
-          <TabsTrigger value="orders" className="flex-1 sm:flex-initial text-xs sm:text-sm">My Orders</TabsTrigger>
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="dashboards" className="text-xs sm:text-sm">Dashboards</TabsTrigger>
+          <TabsTrigger value="orders" className="text-xs sm:text-sm">My Orders</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboards">
