@@ -101,31 +101,54 @@ export function LivePricingSidebar({
             )}
             {/* Mobile: Body Type Dropdown on Step 2 */}
             {isMobile && currentStep === 2 && onBodyTypeChange && allBodyTypes.length > 0 ? (
-              <div>
-                <label className="text-xs text-gray-600 mb-1 block">Body Type</label>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700 mb-1 block">Body Type</label>
                 <Select 
-                  value={configuration.bodyType || undefined} 
-                  onValueChange={onBodyTypeChange}
+                  value={configuration.bodyType && isBodyTypeAllowed(configuration.bodyType) ? configuration.bodyType : undefined} 
+                  onValueChange={(value) => {
+                    // Only allow selection if the body type is allowed
+                    if (isBodyTypeAllowed(value)) {
+                      onBodyTypeChange(value)
+                    } else {
+                      // Prevent selection of incompatible body types
+                      console.warn(`Attempted to select incompatible body type: ${value}`)
+                    }
+                  }}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full h-10 text-sm">
                     <SelectValue placeholder="Select body type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[60vh]">
                     {allBodyTypes.map((bt) => {
                       const allowed = isBodyTypeAllowed(bt)
+                      const isSelected = configuration.bodyType === bt && allowed
                       return (
                         <SelectItem 
                           key={bt} 
                           value={bt}
                           disabled={!allowed}
-                          className={!allowed ? 'opacity-50' : ''}
+                          className={`text-sm ${
+                            !allowed 
+                              ? 'opacity-40 text-gray-400 cursor-not-allowed pointer-events-none' 
+                              : isSelected 
+                                ? 'bg-primary/10 font-medium' 
+                                : ''
+                          }`}
                         >
-                          {bt}
+                          <div className="flex items-center justify-between w-full">
+                            <span>{bt}</span>
+                            {!allowed && (
+                              <span className="text-xs text-gray-400 ml-2">Not available</span>
+                            )}
+                          </div>
                         </SelectItem>
                       )
                     })}
                   </SelectContent>
                 </Select>
+                {!configuration.chassis?.series && (
+                  <p className="text-xs text-gray-500 mt-1">Select a chassis first to see available body types</p>
+                )}
                 {configuration.bodyManufacturer && (
                   <Badge variant="outline" className="text-xs mt-2">
                     {configuration.bodyManufacturer}
