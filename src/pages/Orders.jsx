@@ -10,10 +10,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { OrderDashboards } from './OrderDashboards'
 import { toast } from 'sonner'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export function OrdersPage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [orders, setOrders] = useState([])
   const [allOrders, setAllOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1187,7 +1189,15 @@ export function OrdersPage() {
       </div>
 
       <Dialog open={customizeOpen} onOpenChange={(v) => { if (!v) { setCustomizeOpen(false); } else { setCustomizeOpen(true) } }}>
-        <DialogContent className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent 
+          className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto"
+          onOpenAutoFocus={(e) => {
+            // Prevent auto-focus on mobile devices
+            if (isMobile) {
+              e.preventDefault()
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <span className="sm:hidden">Manage Data</span>
