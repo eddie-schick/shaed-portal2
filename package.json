@@ -8,7 +8,6 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "postinstall": "pnpm dlx pnpm-approve-builds --ignore-scripts=false || true"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
