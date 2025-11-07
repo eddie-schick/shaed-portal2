@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Stepper } from '@/components/Stepper'
 import { LivePricingSidebar } from '@/components/LivePricingSidebar'
@@ -32,7 +32,7 @@ const CHASSIS_CATALOG = [
   { id: 'etransit', name: 'E-Transit 350 Cutaway (2025)', series: 'E-Transit', class: 'Class 2B Electric', gvwr: '9,500–10,360 lbs', description: 'All-electric cutaway for last-mile vocational upfits.', imageKey: 'E-Transit' }
 ]
 
-function ChassisSelectionCard({ chassis, selected, onSelect }) {
+function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
   const [imgIdx, setImgIdx] = useState(0)
   // Map of available images per chassis, sourced from the Vehicle Images folder
   // Using same approach as home page (App.jsx)
@@ -112,12 +112,13 @@ function ChassisSelectionCard({ chassis, selected, onSelect }) {
   ]
 
   return (
-    <Card 
-      className={`hover:shadow-lg transition-shadow cursor-pointer ${
-        selected ? 'ring-2 ring-black bg-gray-50' : ''
-      }`}
-      onClick={() => onSelect(chassis)}
-    >
+    <div ref={cardRef}>
+      <Card 
+        className={`hover:shadow-lg transition-shadow cursor-pointer ${
+          selected ? 'ring-2 ring-black bg-gray-50' : ''
+        }`}
+        onClick={() => onSelect(chassis)}
+      >
       <CardHeader>
         <CardTitle className="text-lg flex items-center justify-between">
           {chassis.name}
@@ -155,12 +156,17 @@ function ChassisSelectionCard({ chassis, selected, onSelect }) {
         </div>
       </CardContent>
     </Card>
+    </div>
   )
 }
 
 export function ConfiguratorChassisSelection() {
   const navigate = useNavigate()
   const location = useLocation()
+  const selectedChassisRef = useRef(null)
+  const hasScrolledToChassis = useRef(false)
+  const lastScrolledSeries = useRef(null)
+  
   const [configuration, setConfiguration] = useState(() => {
     const params = new URLSearchParams(location.search)
     if (params.toString()) {
@@ -169,11 +175,6 @@ export function ConfiguratorChassisSelection() {
     return loadConfiguration()
   })
 
-  // Always position view at top on step entry
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
   const [selectedChassis, setSelectedChassis] = useState(() => {
     // Default to series passed in query (from home page) or existing configuration
     const params = new URLSearchParams(location.search)
@@ -181,6 +182,42 @@ export function ConfiguratorChassisSelection() {
     const initialSeries = seriesFromQuery || configuration.chassis?.series
     return initialSeries ? CHASSIS_CATALOG.find(c => c.series === initialSeries) : null
   })
+
+  // Scroll to selected chassis when coming from home page
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const seriesFromQuery = params.get('series')
+    
+    // Reset scroll flag if series changed (new series selected from home page)
+    if (seriesFromQuery && seriesFromQuery !== lastScrolledSeries.current) {
+      hasScrolledToChassis.current = false
+    }
+    
+    // Only scroll if we have a series from query (coming from home page) and haven't scrolled yet
+    if (seriesFromQuery && selectedChassis && !hasScrolledToChassis.current) {
+      // Wait for DOM to be ready, then scroll to the selected chassis
+      const scrollToChassis = () => {
+        if (selectedChassisRef.current) {
+          selectedChassisRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          })
+          hasScrolledToChassis.current = true
+          lastScrolledSeries.current = seriesFromQuery
+        }
+      }
+      
+      // Use requestAnimationFrame to ensure DOM is rendered, then add a small delay
+      requestAnimationFrame(() => {
+        setTimeout(scrollToChassis, 200)
+      })
+    } else if (!seriesFromQuery) {
+      // If no series from query, scroll to top as usual
+      window.scrollTo(0, 0)
+      lastScrolledSeries.current = null
+    }
+  }, [selectedChassis, location.search])
 
   // Automatically update configuration when chassis is pre-selected from query parameter
   useEffect(() => {
@@ -264,6 +301,7 @@ export function ConfiguratorChassisSelection() {
                       chassis={chassis}
                       selected={selectedChassis?.id === chassis.id}
                       onSelect={handleChassisSelect}
+                      cardRef={selectedChassis?.id === chassis.id ? selectedChassisRef : null}
                     />
                   ))}
                 </div>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Menu, ChevronRight, Clock, MessageSquare, Users, Settings, BarChart3 } from 'lucide-react'
+import { ChevronRight, Clock, MessageSquare, Users, Settings, BarChart3 } from 'lucide-react'
 
 // Helper to read from localStorage
 function readLocal(key, fallback) {
@@ -533,7 +533,7 @@ export function OrderDetailPage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {/* Mobile: Floating action button to open tab menu from right */}
+        {/* Mobile: Button to open side sheet */}
         <div className="sm:hidden mb-4">
           <Button
             variant="outline"
@@ -563,9 +563,9 @@ export function OrderDetailPage() {
           <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
         </TabsList>
 
-        {/* Mobile: Sheet with tab options sliding from right */}
+        {/* Mobile: Side sheet with tab options sliding from right */}
         <Sheet open={mobileTabSheetOpen} onOpenChange={setMobileTabSheetOpen}>
-          <SheetContent side="right" className="w-[85vw] max-w-[320px] p-0">
+          <SheetContent side="right" className="w-[85vw] max-w-[320px] p-0 sm:slide-in-from-right">
             <SheetHeader className="px-6 pt-6 pb-4 border-b">
               <SheetTitle className="text-xl font-semibold">Select Section</SheetTitle>
             </SheetHeader>
