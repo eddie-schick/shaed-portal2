@@ -1511,48 +1511,53 @@ export async function deleteOrders(ids) {
 }
 
 export async function intakeOrder(payload) {
-  ensureSeedData()
-  const orders = readLocal(LS_ORDERS, [])
-  const now = new Date().toISOString()
-  const id = `ord_${Math.random().toString(36).slice(2, 8)}`
-  const buyerName = payload.isStock ? '' : (payload.buyerName || generateFleetBuyerName(orders.length + 7))
-  const buyerSegment = payload.buyerSegment || (payload.isStock ? 'Dealer' : (buyerName.includes('Fleet') || buyerName.includes('LLC') || buyerName.includes('Corp') || buyerName.includes('Inc') ? 'Fleet' : 'Retail'))
-  const baseOrder = {
-    id,
-    dealerCode: payload.dealerCode || 'DEMO',
-    upfitterId: payload.upfitterId ?? payload.build?.upfitter?.id ?? null,
-    status: 'CONFIG_RECEIVED',
-    oemEta: null,
-    upfitterEta: null,
-    deliveryEta: null,
-    actualOemCompleted: null,
-    actualUpfitterCompleted: null,
-    actualDeliveryCompleted: null,
-    createdBy: getCurrentUser(),
-    updatedBy: getCurrentUser(),
-    buyerSegment,
-    priority: payload.priority || 'Normal',
-    tags: payload.tags || [],
-    buildJson: payload.build ?? null,
-    pricingJson: payload.pricing ?? null,
-    isStock: Boolean(payload.isStock),
-    buyerName,
-    listingStatus: null,
-    dealerWebsiteStatus: 'DRAFT',
-    createdAt: now,
-    updatedAt: now,
+  try {
+    ensureSeedData()
+    const orders = readLocal(LS_ORDERS, [])
+    const now = new Date().toISOString()
+    const id = `ord_${Math.random().toString(36).slice(2, 8)}`
+    const buyerName = payload.isStock ? '' : (payload.buyerName || generateFleetBuyerName(orders.length + 7))
+    const buyerSegment = payload.buyerSegment || (payload.isStock ? 'Dealer' : (buyerName.includes('Fleet') || buyerName.includes('LLC') || buyerName.includes('Corp') || buyerName.includes('Inc') ? 'Fleet' : 'Retail'))
+    const baseOrder = {
+      id,
+      dealerCode: payload.dealerCode || 'DEMO',
+      upfitterId: payload.upfitterId ?? payload.build?.upfitter?.id ?? null,
+      status: 'CONFIG_RECEIVED',
+      oemEta: null,
+      upfitterEta: null,
+      deliveryEta: null,
+      actualOemCompleted: null,
+      actualUpfitterCompleted: null,
+      actualDeliveryCompleted: null,
+      createdBy: getCurrentUser(),
+      updatedBy: getCurrentUser(),
+      buyerSegment,
+      priority: payload.priority || 'Normal',
+      tags: payload.tags || [],
+      buildJson: payload.build ?? null,
+      pricingJson: payload.pricing ?? null,
+      isStock: Boolean(payload.isStock),
+      buyerName,
+      listingStatus: null,
+      dealerWebsiteStatus: 'DRAFT',
+      createdAt: now,
+      updatedAt: now,
+    }
+    const withKeys = {
+      ...baseOrder,
+      stockNumber: generateStockNumber(baseOrder),
+      vin: '',
+    }
+    orders.unshift(withKeys)
+    writeOrders(orders)
+    const events = readLocal(LS_EVENTS, [])
+    events.push({ id: `evt_${id}`, orderId: id, from: '', to: 'CONFIG_RECEIVED', at: now })
+    writeLocal(LS_EVENTS, events)
+    return { id }
+  } catch (error) {
+    console.error('intakeOrder failed:', error)
+    throw new Error(error?.message || 'Failed to save order. Please try again.')
   }
-  const withKeys = {
-    ...baseOrder,
-    stockNumber: generateStockNumber(baseOrder),
-    vin: '',
-  }
-  orders.unshift(withKeys)
-  writeOrders(orders)
-  const events = readLocal(LS_EVENTS, [])
-  events.push({ id: `evt_${id}`, orderId: id, from: '', to: 'CONFIG_RECEIVED', at: now })
-  writeLocal(LS_EVENTS, events)
-  return { id }
 }
 
 export async function addNote(orderId, text, user = 'Demo User') {

@@ -195,6 +195,22 @@ function Header() {
 // Vehicle Card Component
 function VehicleCard({ item }) {
   const navigate = useNavigate()
+  
+  // Extract series from chassis model to pass to configurator
+  const getSeriesFromVehicle = () => {
+    const chassisModel = item.vehicle?.chassis_model || ''
+    return getModelCodeFromChassis({ chassis_model: chassisModel, name: '' })
+  }
+  
+  const handleConfigure = () => {
+    const series = getSeriesFromVehicle()
+    const params = new URLSearchParams()
+    if (series) {
+      params.set('series', series)
+    }
+    navigate(`/configurator/chassis-selection?${params.toString()}`)
+  }
+  
   return (
     <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
       <CardHeader>
@@ -254,7 +270,7 @@ function VehicleCard({ item }) {
                 Available in {item.lead_time_days} days
               </div>
             </div>
-            <Button size="sm" className="w-full sm:w-auto" onClick={() => navigate('/configurator/chassis-selection')}>Configure</Button>
+            <Button size="sm" className="w-full sm:w-auto" onClick={handleConfigure}>Configure</Button>
           </div>
           
           <div className="flex items-center text-sm text-gray-500">

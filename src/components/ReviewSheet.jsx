@@ -182,12 +182,27 @@ export function ReviewSheet({ configuration }) {
           total: Math.round(p.total || 0)
         }
       }
-      await intakeOrder(payload)
-      navigate('/ordermanagement')
+      const result = await intakeOrder(payload)
+      
+      // Ensure order was successfully created
+      if (!result || !result.id) {
+        throw new Error('Order creation failed - no order ID returned')
+      }
+      
+      // Set order number to show success message
+      setOrderNumber(result.id)
+      
+      // Navigate after a brief delay to show success message
+      setTimeout(() => {
+        navigate('/ordermanagement')
+      }, 2000)
     } catch (error) {
       console.error('Error submitting order:', error)
+      // Show error alert
+      alert(`Failed to submit order: ${error?.message || 'Please try again.'}`)
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   const handleShare = () => {

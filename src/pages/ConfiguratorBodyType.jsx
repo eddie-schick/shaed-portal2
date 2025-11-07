@@ -91,23 +91,39 @@ export function ConfiguratorBodyType() {
     window.history.replaceState(null, '', newUrl)
   }, [configuration, location.pathname])
 
-  const [selectedBodyType, setSelectedBodyType] = useState(configuration.bodyType || null)
-  const [selectedManufacturer, setSelectedManufacturer] = useState(configuration.bodyManufacturer || null)
-
   const selectedChassis = configuration.chassis?.series
   const CHASSIS_ONLY = 'Chassis Only'
   const allBodyTypes = [CHASSIS_ONLY, ...Object.keys(UPFIT_MATRIX)]
   const isBodyTypeAllowed = (bt) => isDemoMode() || bt === CHASSIS_ONLY || !selectedChassis || UPFIT_MATRIX[bt].chassis.includes(selectedChassis)
 
-  // If user changes chassis to one that doesn't support the current body type, reset selection
+  const [selectedBodyType, setSelectedBodyType] = useState(configuration.bodyType || CHASSIS_ONLY)
+  const [selectedManufacturer, setSelectedManufacturer] = useState(configuration.bodyManufacturer || null)
+
+  // Initialize body type to 'Chassis Only' if not set
+  useEffect(() => {
+    if (!configuration.bodyType) {
+      const updated = {
+        ...configuration,
+        bodyType: CHASSIS_ONLY,
+        completedSteps: [...new Set([...configuration.completedSteps, 1, 2])]
+      }
+      setConfiguration(updated)
+      saveConfiguration(updated)
+      setSelectedBodyType(CHASSIS_ONLY)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // If user changes chassis to one that doesn't support the current body type, reset to 'Chassis Only'
   useEffect(() => {
     if (selectedBodyType && !isBodyTypeAllowed(selectedBodyType)) {
-      setSelectedBodyType(null)
+      setSelectedBodyType(CHASSIS_ONLY)
       setSelectedManufacturer(null)
       const updated = {
         ...configuration,
-        bodyType: null,
-        bodyManufacturer: null
+        bodyType: CHASSIS_ONLY,
+        bodyManufacturer: null,
+        completedSteps: [...new Set([...configuration.completedSteps, 1, 2])]
       }
       setConfiguration(updated)
       saveConfiguration(updated)
@@ -252,7 +268,13 @@ export function ConfiguratorBodyType() {
 
           {/* Live Pricing Sidebar */}
           <div className="lg:w-80 w-full order-1 lg:order-2">
-            <LivePricingSidebar configuration={configuration} />
+            <LivePricingSidebar 
+              configuration={configuration}
+              currentStep={2}
+              onBodyTypeChange={handleBodyTypeSelect}
+              allBodyTypes={allBodyTypes}
+              isBodyTypeAllowed={isBodyTypeAllowed}
+            />
           </div>
         </div>
       </div>

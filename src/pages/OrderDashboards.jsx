@@ -261,7 +261,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle>Orders by Buyer Segment</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}}>
+                <ChartContainer config={{}} className="h-[400px] w-full">
                   <PieChart>
                     <Pie
                       data={Object.entries(metrics.revenueBySegment).map(([name, value]) => ({ name, value }))}
@@ -288,7 +288,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle>Order Volume vs Delivery Volume Over Time</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}}>
+                <ChartContainer config={{}} className="h-[400px] w-full">
                   <AreaChart data={useMemo(() => {
                     const monthly = orders.reduce((acc, o) => {
                       if (!o.createdAt) return acc
@@ -409,7 +409,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>Average Days at Upfitter</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <BarChart data={useMemo(() => {
                   const byUpfitter = orders.reduce((acc, o) => {
                     const upfitter = o.buildJson?.upfitter?.name || 'Unknown'
@@ -447,7 +447,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>Lead Time Trend</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <LineChart data={useMemo(() => {
                   const monthly = orders
                     .filter(o => o.createdAt && o.actualDeliveryCompleted)
@@ -593,7 +593,7 @@ export function OrderDashboards({ orders = [] }) {
                 }
                 
                 return (
-                  <ChartContainer config={{}} className="h-[400px]">
+                  <ChartContainer config={{}} className="h-[400px] w-full">
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis 
@@ -768,7 +768,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>On-time vs Late vs Early by Upfitter</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <BarChart data={useMemo(() => {
                   const byUpfitter = orders
                     .filter(o => o.deliveryEta && o.actualDeliveryCompleted && o.buildJson?.upfitter?.name)
@@ -896,7 +896,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle>Volume by Segment</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}}>
+                <ChartContainer config={{}} className="h-[400px] w-full">
                   <PieChart>
                     <Pie
                       data={useMemo(() => {
@@ -939,7 +939,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle>Avg. Lead Time by Segment</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}}>
+                <ChartContainer config={{}} className="h-[400px] w-full">
                   <BarChart data={useMemo(() => {
                     const bySegment = orders
                       .filter(o => o.createdAt && o.actualDeliveryCompleted)
@@ -1155,7 +1155,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>SLA Compliance by Priority</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <BarChart data={useMemo(() => {
                   const byPriority = orders
                     .filter(o => o.priority && o.deliveryEta && o.actualDeliveryCompleted)
@@ -1273,7 +1273,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>Margin % by Model</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <BarChart data={useMemo(() => {
                   const byModel = orders
                     .filter(o => o.pricingJson?.total && o.buildJson?.chassis?.series)
@@ -1311,7 +1311,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>Revenue by Buyer Segment Over Time</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <AreaChart data={useMemo(() => {
                   const monthly = orders
                     .filter(o => o.createdAt && o.pricingJson?.total)
@@ -1347,7 +1347,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>Delay Days vs Margin (Cost of Slippage)</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}}>
+              <ChartContainer config={{}} className="h-[400px] w-full">
                 <ScatterChart data={useMemo(() => {
                   return orders
                     .filter(o => o.deliveryEta && o.actualDeliveryCompleted && o.pricingJson?.total)

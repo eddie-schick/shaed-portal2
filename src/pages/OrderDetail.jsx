@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Menu } from 'lucide-react'
+import { Menu, ChevronRight, Clock, MessageSquare, Users, Settings, BarChart3 } from 'lucide-react'
 
 // Helper to read from localStorage
 function readLocal(key, fallback) {
@@ -533,15 +533,24 @@ export function OrderDetailPage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {/* Mobile: Button to open tab menu */}
+        {/* Mobile: Floating action button to open tab menu from right */}
         <div className="sm:hidden mb-4">
           <Button
             variant="outline"
             onClick={() => setMobileTabSheetOpen(true)}
-            className="w-full justify-between"
+            className="w-full justify-between h-12 text-base font-medium shadow-sm hover:shadow-md transition-shadow"
           >
-            <span className="capitalize">{activeTab === 'timeline' ? 'Timeline' : activeTab === 'comments' ? 'Comments' : activeTab === 'participants' ? 'Participants' : activeTab === 'operational' ? 'Operational' : 'Analytics'}</span>
-            <Menu className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              {activeTab === 'timeline' && <Clock className="h-5 w-5" />}
+              {activeTab === 'comments' && <MessageSquare className="h-5 w-5" />}
+              {activeTab === 'participants' && <Users className="h-5 w-5" />}
+              {activeTab === 'operational' && <Settings className="h-5 w-5" />}
+              {activeTab === 'analytics' && <BarChart3 className="h-5 w-5" />}
+              <span className="capitalize">
+                {activeTab === 'timeline' ? 'Timeline' : activeTab === 'comments' ? 'Comments' : activeTab === 'participants' ? 'Participants' : activeTab === 'operational' ? 'Operational' : 'Analytics'}
+              </span>
+            </div>
+            <ChevronRight className="h-5 w-5 text-gray-400" />
           </Button>
         </div>
 
@@ -554,63 +563,88 @@ export function OrderDetailPage() {
           <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
         </TabsList>
 
-        {/* Mobile: Sheet with tab options */}
+        {/* Mobile: Sheet with tab options sliding from right */}
         <Sheet open={mobileTabSheetOpen} onOpenChange={setMobileTabSheetOpen}>
-          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-            <SheetHeader>
-              <SheetTitle>Select Tab</SheetTitle>
+          <SheetContent side="right" className="w-[85vw] max-w-[320px] p-0">
+            <SheetHeader className="px-6 pt-6 pb-4 border-b">
+              <SheetTitle className="text-xl font-semibold">Select Section</SheetTitle>
             </SheetHeader>
-            <div className="mt-6 space-y-2">
-              <Button
-                variant={activeTab === 'timeline' ? 'default' : 'ghost'}
-                className="w-full justify-start"
+            <div className="mt-2 py-2">
+              <button
                 onClick={() => {
                   setActiveTab('timeline')
                   setMobileTabSheetOpen(false)
                 }}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${
+                  activeTab === 'timeline'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                }`}
               >
-                Timeline
-              </Button>
-              <Button
-                variant={activeTab === 'comments' ? 'default' : 'ghost'}
-                className="w-full justify-start"
+                <Clock className={`h-6 w-6 ${activeTab === 'timeline' ? 'text-primary-foreground' : 'text-gray-500'}`} />
+                <span className="text-base">Timeline</span>
+                {activeTab === 'timeline' && <ChevronRight className="h-5 w-5 ml-auto text-primary-foreground" />}
+              </button>
+              <button
                 onClick={() => {
                   setActiveTab('comments')
                   setMobileTabSheetOpen(false)
                 }}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${
+                  activeTab === 'comments'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                }`}
               >
-                Comments
-              </Button>
-              <Button
-                variant={activeTab === 'participants' ? 'default' : 'ghost'}
-                className="w-full justify-start"
+                <MessageSquare className={`h-6 w-6 ${activeTab === 'comments' ? 'text-primary-foreground' : 'text-gray-500'}`} />
+                <span className="text-base">Comments</span>
+                {activeTab === 'comments' && <ChevronRight className="h-5 w-5 ml-auto text-primary-foreground" />}
+              </button>
+              <button
                 onClick={() => {
                   setActiveTab('participants')
                   setMobileTabSheetOpen(false)
                 }}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${
+                  activeTab === 'participants'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                }`}
               >
-                Participants
-              </Button>
-              <Button
-                variant={activeTab === 'operational' ? 'default' : 'ghost'}
-                className="w-full justify-start"
+                <Users className={`h-6 w-6 ${activeTab === 'participants' ? 'text-primary-foreground' : 'text-gray-500'}`} />
+                <span className="text-base">Participants</span>
+                {activeTab === 'participants' && <ChevronRight className="h-5 w-5 ml-auto text-primary-foreground" />}
+              </button>
+              <button
                 onClick={() => {
                   setActiveTab('operational')
                   setMobileTabSheetOpen(false)
                 }}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${
+                  activeTab === 'operational'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                }`}
               >
-                Operational
-              </Button>
-              <Button
-                variant={activeTab === 'analytics' ? 'default' : 'ghost'}
-                className="w-full justify-start"
+                <Settings className={`h-6 w-6 ${activeTab === 'operational' ? 'text-primary-foreground' : 'text-gray-500'}`} />
+                <span className="text-base">Operational</span>
+                {activeTab === 'operational' && <ChevronRight className="h-5 w-5 ml-auto text-primary-foreground" />}
+              </button>
+              <button
                 onClick={() => {
                   setActiveTab('analytics')
                   setMobileTabSheetOpen(false)
                 }}
+                className={`w-full flex items-center gap-4 px-6 py-4 text-left transition-colors ${
+                  activeTab === 'analytics'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'hover:bg-gray-50 active:bg-gray-100'
+                }`}
               >
-                Analytics
-              </Button>
+                <BarChart3 className={`h-6 w-6 ${activeTab === 'analytics' ? 'text-primary-foreground' : 'text-gray-500'}`} />
+                <span className="text-base">Analytics</span>
+                {activeTab === 'analytics' && <ChevronRight className="h-5 w-5 ml-auto text-primary-foreground" />}
+              </button>
             </div>
           </SheetContent>
         </Sheet>

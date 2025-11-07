@@ -182,6 +182,27 @@ export function ConfiguratorChassisSelection() {
     return initialSeries ? CHASSIS_CATALOG.find(c => c.series === initialSeries) : null
   })
 
+  // Automatically update configuration when chassis is pre-selected from query parameter
+  useEffect(() => {
+    if (selectedChassis) {
+      const currentSeries = configuration.chassis?.series
+      if (!currentSeries || currentSeries !== selectedChassis.series) {
+        const updated = {
+          ...configuration,
+          chassis: {
+            ...configuration.chassis,
+            series: selectedChassis.series,
+            class: selectedChassis.class
+          },
+          completedSteps: [1]
+        }
+        setConfiguration(updated)
+        saveConfiguration(updated)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChassis])
+
   // Update URL when configuration changes
   useEffect(() => {
     const query = configToQuery(configuration)

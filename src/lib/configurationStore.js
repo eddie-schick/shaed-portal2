@@ -7,7 +7,7 @@ export const defaultConfiguration = {
   // Quantity of units in the quote/order
   units: 1,
   // Step 1-2 (existing)
-  bodyType: null,
+  bodyType: 'Chassis Only',
   bodyManufacturer: null,
   
   // Step 3: Chassis

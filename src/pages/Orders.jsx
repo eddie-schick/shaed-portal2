@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { OrderDashboards } from './OrderDashboards'
 import { toast } from 'sonner'
 
@@ -590,6 +591,95 @@ export function OrdersPage() {
     return String(value)
   }
 
+  // Helper function to get column value for mobile cards
+  const getColumnValue = (o, columnId) => {
+    const ch = o.buildJson?.chassis || {}
+    const specs = o.buildJson?.bodySpecs || {}
+    const pricing = o.pricingJson || {}
+    
+    switch (columnId) {
+      case 'id':
+        return o.id ?? ''
+      case 'stockNumber':
+        return o.stockNumber ?? ''
+      case 'status':
+        return getStatusLabel(o.status) || ''
+      case 'vin':
+        return o.status === 'CONFIG_RECEIVED' ? '' : (o.vin || '')
+      case 'buyer':
+      case 'dealer':
+        return o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''
+      case 'upfitter':
+        return o.buildJson?.upfitter?.name ?? ''
+      case 'oemEta':
+      case 'upfitterEta':
+      case 'deliveryEta':
+        return o[columnId] ? new Date(o[columnId]).toLocaleDateString() : ''
+      case 'deliveryStatus':
+        return getDeliveryStatusLabel(o)
+      case 'createdAt':
+        return o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''
+      case 'inventoryStatus':
+        return salesStatusLabel[getSalesStatus(o)]
+      case 'dealerWebsite':
+        if (o.inventoryStatus === 'SOLD') return ''
+        {
+          const s = o.dealerWebsiteStatus ?? (o.listingStatus === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')
+          return s === 'PUBLISHED' ? 'Published' : (s === 'DRAFT' ? 'Draft' : 'Unpublished')
+        }
+      case 'series':
+        return ch.series ?? ''
+      case 'cab':
+        return ch.cab ?? ''
+      case 'drivetrain':
+        return ch.drivetrain ?? ''
+      case 'wheelbase':
+        return ch.wheelbase ?? ''
+      case 'gvwr':
+        return ch.gvwr ?? ''
+      case 'powertrain':
+        return ch.powertrain ?? ''
+      case 'bodyType':
+        return o.buildJson?.bodyType ?? ''
+      case 'manufacturer':
+        return o.buildJson?.manufacturer ?? ''
+      case 'bodyLength':
+        return specs.length ?? ''
+      case 'bodyMaterial':
+        return specs.material ?? ''
+      case 'optionsPrice':
+        return pricing.optionsPrice != null ? `$${Number(pricing.optionsPrice).toLocaleString()}` : ''
+      case 'chassisMsrp':
+        return pricing.chassisMsrp != null ? `$${Number(pricing.chassisMsrp).toLocaleString()}` : ''
+      case 'bodyPrice':
+        return pricing.bodyPrice != null ? `$${Number(pricing.bodyPrice).toLocaleString()}` : ''
+      case 'labor':
+        return pricing.labor != null ? `$${Number(pricing.labor).toLocaleString()}` : ''
+      case 'freight':
+        return pricing.freight != null ? `$${Number(pricing.freight).toLocaleString()}` : ''
+      case 'total':
+        return pricing.total != null ? `$${Number(pricing.total).toLocaleString()}` : ''
+      case 'buyerSegment':
+        return o.buyerSegment || (o.inventoryStatus === 'STOCK' ? 'Dealer' : (o.buyerName?.includes('Fleet') || o.buyerName?.includes('LLC') || o.buyerName?.includes('Corp') || o.buyerName?.includes('Inc') ? 'Fleet' : 'Retail'))
+      case 'priority':
+        return o.priority || 'Normal'
+      case 'tags':
+        return Array.isArray(o.tags) && o.tags.length > 0 ? o.tags.join(', ') : ''
+      case 'actualOemCompleted':
+        return o.actualOemCompleted ? new Date(o.actualOemCompleted).toLocaleDateString() : ''
+      case 'actualUpfitterCompleted':
+        return o.actualUpfitterCompleted ? new Date(o.actualUpfitterCompleted).toLocaleDateString() : ''
+      case 'actualDeliveryCompleted':
+        return o.actualDeliveryCompleted ? new Date(o.actualDeliveryCompleted).toLocaleDateString() : ''
+      case 'createdBy':
+        return o.createdBy || ''
+      case 'updatedBy':
+        return o.updatedBy || ''
+      default:
+        return o[columnId] ?? ''
+    }
+  }
+
   const statusPill = (status) => {
     const map = {
       CONFIG_RECEIVED: 'bg-gray-200 text-gray-900',
@@ -992,7 +1082,8 @@ export function OrdersPage() {
               <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.5"/>
               <path d="M19.4 15a1 1 0 0 1 .2 1.1l-1 1.8a1 1 0 0 1-1 .5l-2-.4a7 7 0 0 1-1.1.7l-.3 2a1 1 0 0 1-1 .8h-2a1 1 0 0 1-1-.8l-.3-2a7 7 0 0 1-1.1-.7l-2 .4a1 1 0 0 1-1-.5l-1-1.8a1 1 0 0 1 .2-1.1l1.7-1.3a6.2 6.2 0 0 1 0-1.4L4.6 11a1 1 0 0 1-.2-1.1l1-1.8a1 1 0 0 1 1-.5l2 .4 1.1-.7.3-2a1 1 0 0 1 1-.8h2a1 1 0 0 1 1 .8l.3 2 1.1.7 2-.4a1 1 0 0 1 1 .5l1 1.8a1 1 0 0 1-.2 1.1l-1.7 1.3c.1.5.1.9 0 1.4L19.4 15Z" stroke="currentColor" strokeWidth="1.5"/>
             </svg>
-            <span className="text-sm">Manage Columns</span>
+            <span className="text-sm sm:hidden">Manage Data</span>
+            <span className="text-sm hidden sm:inline">Manage Columns</span>
           </button>
           {/* Reset Demo Data button removed per request */}
           {hasAnyFilters && (
@@ -1027,7 +1118,8 @@ export function OrdersPage() {
         <DialogContent className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <span>Manage Columns</span>
+              <span className="sm:hidden">Manage Data</span>
+              <span className="hidden sm:inline">Manage Columns</span>
               <span className="text-xs text-gray-500">Available ({(draftColumns||[]).filter(c => !c.visible && c.id !== 'select').length}) · Selected ({(draftColumns||[]).filter(c => c.visible).length})</span>
             </DialogTitle>
           </DialogHeader>
@@ -1109,69 +1201,214 @@ export function OrdersPage() {
       {/* Column filters are now provided in each table header */}
 
       {/* Mobile Card View */}
-      <div className="block sm:hidden space-y-4">
+      <div className="block sm:hidden space-y-3">
         {loading ? (
-          <div className="text-center py-8">Loading…</div>
+          <div className="text-center py-8 text-sm text-gray-500">Loading…</div>
         ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-8">No orders</div>
+          <div className="text-center py-8 text-sm text-gray-500">No orders</div>
         ) : (
-          paginated.map((o) => (
-            <Card key={o.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <Link to={`/ordermanagement/${o.id}`} className="text-blue-600 underline font-medium text-sm truncate block">
-                      {o.id}
-                    </Link>
-                    <div className="text-xs text-gray-500 mt-1">{o.stockNumber && `Stock #: ${o.stockNumber}`}</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(o.id)}
-                    onChange={() => toggleSelected(o.id)}
-                    className="mt-1"
-                    aria-label={`Select ${o.id}`}
-                  />
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {statusPill(o.status)}
-                    {o.vin && <span className="text-xs text-gray-600">VIN: {o.vin}</span>}
-                  </div>
-                  <div>
-                    <span className="font-medium">Model:</span> {o.buildJson?.chassis?.series || '-'}
-                  </div>
-                  <div>
-                    <span className="font-medium">Body:</span> {o.buildJson?.bodyType || '-'}
-                  </div>
-                  <div>
-                    <span className="font-medium">Upfitter:</span> {o.buildJson?.upfitter?.name || '-'}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-gray-600">Chassis ETA:</span>
-                      <div>{etaText(o.oemEta)}</div>
+          paginated.map((o) => {
+            // Get visible columns excluding 'select'
+            const mobileColumns = visibleColumns.filter(col => col.id !== 'select')
+            
+            // Group columns by category for better organization
+            const statusFields = mobileColumns.filter(col => ['status', 'inventoryStatus', 'deliveryStatus'].includes(col.id))
+            const etaFields = mobileColumns.filter(col => ['oemEta', 'upfitterEta', 'deliveryEta'].includes(col.id))
+            const vehicleFields = mobileColumns.filter(col => ['series', 'bodyType', 'manufacturer', 'vin', 'cab', 'drivetrain', 'wheelbase', 'gvwr', 'powertrain', 'bodyLength', 'bodyMaterial'].includes(col.id))
+            const pricingFields = mobileColumns.filter(col => ['chassisMsrp', 'bodyPrice', 'optionsPrice', 'labor', 'freight', 'total'].includes(col.id))
+            const buyerFields = mobileColumns.filter(col => ['buyer', 'buyerSegment', 'priority'].includes(col.id))
+            const otherFields = mobileColumns.filter(col => 
+              !['id', 'stockNumber', 'status', 'inventoryStatus', 'deliveryStatus', 'oemEta', 'upfitterEta', 'deliveryEta', 
+                'series', 'bodyType', 'manufacturer', 'vin', 'cab', 'drivetrain', 'wheelbase', 'gvwr', 'powertrain', 'bodyLength', 'bodyMaterial',
+                'chassisMsrp', 'bodyPrice', 'optionsPrice', 'labor', 'freight', 'total', 'buyer', 'buyerSegment', 'priority',
+                'upfitter', 'createdAt', 'dealerWebsite', 'tags', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted', 'createdBy', 'updatedBy'].includes(col.id)
+            )
+            const metadataFields = mobileColumns.filter(col => ['upfitter', 'createdAt', 'dealerWebsite', 'tags', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted', 'createdBy', 'updatedBy'].includes(col.id))
+            
+            return (
+              <Card key={o.id} className="hover:shadow-md transition-shadow border border-gray-200">
+                <CardContent className="p-4">
+                  {/* Header Section */}
+                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-100">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <Link to={`/ordermanagement/${o.id}`} className="text-blue-600 hover:text-blue-700 font-semibold text-base truncate block mb-1">
+                        {o.id}
+                      </Link>
+                      {mobileColumns.some(col => col.id === 'stockNumber') && o.stockNumber && (
+                        <div className="text-xs text-gray-500 font-medium">Stock #: {o.stockNumber}</div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-gray-600">Final ETA:</span>
-                      <div>{etaText(o.deliveryEta)}</div>
-                    </div>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(o.id)}
+                      onChange={() => toggleSelected(o.id)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      aria-label={`Select ${o.id}`}
+                    />
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div>
-                      <div className="text-lg font-bold text-green-600">
-                        ${(o.pricingJson?.total || 0).toLocaleString()}
+                  
+                  {/* Status Section */}
+                  {statusFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {statusFields.map((col) => {
+                          if (col.id === 'status') {
+                            return <div key={col.id}>{statusPill(o.status)}</div>
+                          }
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '') return null
+                          return (
+                            <Badge key={col.id} variant="outline" className="text-xs">
+                              {col.label}: {value}
+                            </Badge>
+                          )
+                        })}
                       </div>
-                      <div className="text-xs text-gray-500">{getDeliveryStatusLabel(o)}</div>
+                    </div>
+                  )}
+                  
+                  {/* Vehicle Details Section */}
+                  {vehicleFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Vehicle</div>
+                      <div className="space-y-1.5">
+                        {vehicleFields.map((col) => {
+                          if (col.id === 'vin') {
+                            const vinValue = getColumnValue(o, col.id)
+                            if (!vinValue || vinValue === '') return null
+                            return (
+                              <div key={col.id} className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600 font-medium">{col.label}:</span>
+                                <span className="font-mono text-xs">{vinValue}</span>
+                              </div>
+                            )
+                          }
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '' || value === '-') return null
+                          return (
+                            <div key={col.id} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 font-medium">{col.label}:</span>
+                              <span className="text-right font-medium">{value}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* ETAs Section - Grouped in grid */}
+                  {etaFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timeline</div>
+                      <div className="grid grid-cols-1 gap-2">
+                        {etaFields.map((col) => (
+                          <div key={col.id} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600 font-medium">{col.label}:</span>
+                            <span className="text-right">{etaText(o[col.id])}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Pricing Section */}
+                  {pricingFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pricing</div>
+                      <div className="space-y-1.5">
+                        {pricingFields.map((col) => {
+                          if (col.id === 'total') {
+                            const totalValue = getColumnValue(o, col.id)
+                            return (
+                              <div key={col.id} className="flex items-center justify-between pt-1">
+                                <span className="text-sm font-semibold text-gray-700">{col.label}:</span>
+                                <span className="text-lg font-bold text-green-600">{totalValue || '$0'}</span>
+                              </div>
+                            )
+                          }
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '' || value === '-') return null
+                          return (
+                            <div key={col.id} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 font-medium">{col.label}:</span>
+                              <span className="text-right font-medium">{value}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Buyer Section */}
+                  {buyerFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Buyer</div>
+                      <div className="space-y-1.5">
+                        {buyerFields.map((col) => {
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '' || value === '-') return null
+                          return (
+                            <div key={col.id} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 font-medium">{col.label}:</span>
+                              <span className="text-right font-medium">{value}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Metadata Section */}
+                  {metadataFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="space-y-1.5">
+                        {metadataFields.map((col) => {
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '' || value === '-') return null
+                          return (
+                            <div key={col.id} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 font-medium">{col.label}:</span>
+                              <span className="text-right font-medium truncate max-w-[60%]">{value}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Other Fields Section */}
+                  {otherFields.length > 0 && (
+                    <div className="mb-3 pb-3 border-b border-gray-100">
+                      <div className="space-y-1.5">
+                        {otherFields.map((col) => {
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '' || value === '-') return null
+                          return (
+                            <div key={col.id} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 font-medium">{col.label}:</span>
+                              <span className="text-right font-medium truncate max-w-[60%]">{value}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Action Footer */}
+                  <div className="flex items-center justify-between pt-2 mt-2">
+                    <div className="flex-1">
+                      {mobileColumns.some(c => c.id === 'deliveryStatus') && (
+                        <div className="text-xs text-gray-500">{getDeliveryStatusLabel(o)}</div>
+                      )}
                     </div>
                     <Link to={`/ordermanagement/${o.id}`}>
-                      <Button size="sm" variant="outline">View</Button>
+                      <Button size="sm" variant="outline" className="text-xs">View Details</Button>
                     </Link>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            )
+          })
         )}
       </div>
 

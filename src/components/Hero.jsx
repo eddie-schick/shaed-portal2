@@ -99,7 +99,7 @@ export default function Hero({
 					<img
 						src="/hero.webp"
 						alt="Commercial vehicles hero"
-						className="h-[70svh] w-full max-w-full object-cover object-center md:h-[78svh]"
+						className="h-[70svh] w-full max-w-full object-contain object-center md:h-[78svh] md:object-cover"
 						fetchpriority="high"
 						decoding="async"
 						style={{ maxWidth: '100%', width: '100%' }}

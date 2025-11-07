@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CompletedUnitsPreview } from './CompletedUnitsGallery'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { 
   DollarSign, 
   Truck, 
@@ -15,7 +17,16 @@ import {
 import { getChassis, getBodies, getOptions } from '@/api/routes'
 import { calculatePricing } from '@/lib/configurationStore'
 
-export function LivePricingSidebar({ configuration, className = '' }) {
+export function LivePricingSidebar({ 
+  configuration, 
+  className = '',
+  // Props for body type selection on step 2 (mobile only)
+  onBodyTypeChange,
+  allBodyTypes = [],
+  isBodyTypeAllowed = () => true,
+  currentStep = null
+}) {
+  const isMobile = useIsMobile()
   const [pricing, setPricing] = useState({
     chassisMSRP: 0,
     bodyPrice: 0,
@@ -70,12 +81,12 @@ export function LivePricingSidebar({ configuration, className = '' }) {
   return (
     <div className={`w-full lg:w-80 ${className}`}>
       <Card className="lg:sticky lg:top-4">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-1">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             My Order
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 -mt-5">
           {/* Configuration Summary */}
           <div className="space-y-2 text-sm">
             {configuration.chassis?.series && (
@@ -88,15 +99,50 @@ export function LivePricingSidebar({ configuration, className = '' }) {
                 )}
               </div>
             )}
-            {configuration.bodyType && (
+            {/* Mobile: Body Type Dropdown on Step 2 */}
+            {isMobile && currentStep === 2 && onBodyTypeChange && allBodyTypes.length > 0 ? (
               <div>
-                <span className="font-medium">{configuration.bodyType}</span>
+                <label className="text-xs text-gray-600 mb-1 block">Body Type</label>
+                <Select 
+                  value={configuration.bodyType || undefined} 
+                  onValueChange={onBodyTypeChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select body type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allBodyTypes.map((bt) => {
+                      const allowed = isBodyTypeAllowed(bt)
+                      return (
+                        <SelectItem 
+                          key={bt} 
+                          value={bt}
+                          disabled={!allowed}
+                          className={!allowed ? 'opacity-50' : ''}
+                        >
+                          {bt}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
                 {configuration.bodyManufacturer && (
-                  <Badge variant="outline" className="text-xs ml-2">
+                  <Badge variant="outline" className="text-xs mt-2">
                     {configuration.bodyManufacturer}
                   </Badge>
                 )}
               </div>
+            ) : (
+              configuration.bodyType && (
+                <div>
+                  <span className="font-medium">{configuration.bodyType}</span>
+                  {configuration.bodyManufacturer && (
+                    <Badge variant="outline" className="text-xs ml-2">
+                      {configuration.bodyManufacturer}
+                    </Badge>
+                  )}
+                </div>
+              )
             )}
             {configuration.bodyAccessories?.length > 0 && (
               <div className="text-xs text-gray-600">

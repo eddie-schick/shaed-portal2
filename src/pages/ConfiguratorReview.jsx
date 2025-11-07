@@ -213,9 +213,17 @@ export function ConfiguratorReview() {
     setSubmitting(true)
     try {
       const payload = mapToIntakePayload()
-      await intakeOrder(payload)
+      const result = await intakeOrder(payload)
+      
+      // Ensure order was successfully created
+      if (!result || !result.id) {
+        throw new Error('Order creation failed - no order ID returned')
+      }
+      
+      // Set success states immediately and synchronously
       setOrderSubmitted(true)
       setShowSuccessDialog(true)
+      
       // Show toast for desktop
       toast.success('Order submitted successfully!', {
         description: 'Your order request has been sent to order management.',
@@ -223,9 +231,13 @@ export function ConfiguratorReview() {
       })
     } catch (e) {
       console.error('Submit failed', e)
-      setSubmitError(e?.message || 'Submit failed')
+      const errorMessage = e?.message || 'Submit failed'
+      setSubmitError(errorMessage)
+      // Ensure success dialog is closed on error
+      setShowSuccessDialog(false)
+      setOrderSubmitted(false)
       toast.error('Failed to submit order', {
-        description: e?.message || 'Please try again.',
+        description: errorMessage || 'Please try again.',
       })
     } finally {
       setSubmitting(false)
@@ -243,6 +255,13 @@ export function ConfiguratorReview() {
       setConfiguration(updated)
     }
   }, [])
+
+  // Ensure success dialog is shown when order is submitted
+  useEffect(() => {
+    if (orderSubmitted && !showSuccessDialog) {
+      setShowSuccessDialog(true)
+    }
+  }, [orderSubmitted, showSuccessDialog])
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -290,7 +309,7 @@ export function ConfiguratorReview() {
                 </Button>
                 <Button onClick={handleReturnHome} variant="outline" className="flex-1 w-full sm:w-auto">
                   <Home className="w-4 h-4 mr-2" />
-                  Return to Marketplace
+                  Manage Orders
                 </Button>
               </div>
             </CardContent>
@@ -348,7 +367,7 @@ export function ConfiguratorReview() {
               size="lg"
             >
               <Home className="w-4 h-4 mr-2" />
-              Return to Marketplace
+              Manage Orders
             </Button>
           </div>
         </DialogContent>
