@@ -638,12 +638,12 @@ function DocumentUploadCard({ document, orderId, onUpload }) {
     <Card className={`${isRequired && !hasFile ? 'border-red-500 border-2' : hasFile ? 'border-green-300' : 'border-gray-200'}`}>
       <CardContent className="p-3 sm:p-4">
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex items-start gap-2 flex-1 min-w-0">
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
               <Info className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-              <span className="text-xs sm:text-sm font-medium line-clamp-2 break-words">{document.name}</span>
+              <span className="text-xs sm:text-sm font-medium break-words flex-1">{document.name}</span>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0 sm:ml-2">
+            <div className="flex items-center gap-1.5 pl-6">
               {isRequired && (
                 <Badge variant="destructive" className="text-xs whitespace-nowrap">Required</Badge>
               )}
