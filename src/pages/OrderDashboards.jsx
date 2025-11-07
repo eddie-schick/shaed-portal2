@@ -263,7 +263,7 @@ export function OrderDashboards({ orders = [] }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Orders by Buyer Segment</CardTitle>
+                <CardTitle>Orders by Buyer Type</CardTitle>
               </CardHeader>
               <CardContent>
                 <ChartContainer config={{}} className="h-[400px] w-full">
@@ -1313,7 +1313,7 @@ export function OrderDashboards({ orders = [] }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Revenue by Buyer Segment Over Time</CardTitle>
+              <CardTitle>Revenue by Buyer Type Over Time</CardTitle>
             </CardHeader>
             <CardContent>
               <ChartContainer config={{}} className="h-[400px] w-full">

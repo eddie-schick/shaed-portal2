@@ -38,7 +38,7 @@ const LS_NOTES = 'orderNotes'
 const LS_STOCK_SEQ = 'stockSequence'
 const LS_VIN_SEQ = 'vinSequence'
 const LS_SEED_VERSION = 'ordersSeedVersion'
-const CURRENT_SEED_VERSION = '2025-09-25-158' // Incremented to add varied pricing
+const CURRENT_SEED_VERSION = '2025-09-25-161' // Updated: strict enforcement of Stock=Dealer, SOLD=Fleet with buyer names
 
 // Helper to get current user (for createdBy/updatedBy)
 function getCurrentUser() {
@@ -460,9 +460,11 @@ function seedDemoOrders(targetCount = 154) {
         upfitter: { id: up.id, name: up.name },
       },
       pricingJson: null, // Will be generated below
-      inventoryStatus: (i % 2 === 0) ? 'STOCK' : 'SOLD',
-      isStock: (i % 2 === 0),
-      buyerName: (i % 2 === 0) ? '' : generateFleetBuyerName(i),
+      // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+      // Shift pattern so first orders have buyers (i+1 % 4 === 0 means indices 3, 7, 11... are stock)
+      inventoryStatus: ((i + 1) % 4 === 0) ? 'STOCK' : 'SOLD',
+      isStock: ((i + 1) % 4 === 0),
+      buyerName: '', // Will be set based on buyerSegment below
       listingStatus: null,
       dealerWebsiteStatus: (() => {
         // Ensure all dealer website statuses appear; publish only stock units
@@ -535,6 +537,11 @@ function seedDemoOrders(targetCount = 154) {
       baseOrder.inventoryStatus = 'STOCK'
     }
     
+    // Final enforcement: Always ensure buyerSegment and buyerName match inventoryStatus
+    // Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+    baseOrder.buyerSegment = baseOrder.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+    baseOrder.buyerName = baseOrder.buyerSegment === 'Fleet' ? (baseOrder.buyerName || generateFleetBuyerName(i)) : ''
+    
     // Set actual completion dates for any delivered orders that don't have them
     if (baseOrder.status === 'DELIVERED' && !baseOrder.actualDeliveryCompleted) {
       baseOrder.actualDeliveryCompleted = baseOrder.deliveryEta || new Date().toISOString()
@@ -569,9 +576,10 @@ function seedDemoOrders(targetCount = 154) {
       const users = ['Sarah Johnson', 'Mike Chen', 'Taylor Steele', 'Alex Rivera', 'Jordan Smith', 'Casey Williams', 'Morgan Davis']
       baseOrder.updatedBy = users[(i + 1) % users.length]
     }
-    if (!baseOrder.buyerSegment) {
-      baseOrder.buyerSegment = baseOrder.inventoryStatus === 'STOCK' ? 'Dealer' : (baseOrder.buyerName?.includes('Fleet') || baseOrder.buyerName?.includes('LLC') || baseOrder.buyerName?.includes('Corp') || baseOrder.buyerName?.includes('Inc') ? 'Fleet' : 'Retail')
-    }
+    // Final enforcement: Always ensure buyerSegment and buyerName match inventoryStatus
+    // Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+    baseOrder.buyerSegment = baseOrder.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+    baseOrder.buyerName = baseOrder.buyerSegment === 'Fleet' ? generateFleetBuyerName(i) : ''
     if (!baseOrder.priority) {
       const priorities = ['Low', 'Normal', 'High', 'Urgent']
       baseOrder.priority = priorities[i % priorities.length]
@@ -661,7 +669,9 @@ function ensureSeedData() {
       if (!name || /demo/i.test(name)) return upfitterId === 'metro-upfits' ? 'Metro Upfits' : upfitterId === 'northline-upfits' ? 'Northline Upfits' : 'Knapheide Detroit'
       return name
     })()
-    const inventoryStatus = Math.random() > 0.5 ? 'STOCK' : 'SOLD'
+    // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+    // Shift pattern so first orders have buyers
+    const inventoryStatus = ((i + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
     const createdAt = o.createdAt || new Date(now - (i + 7) * 86400000).toISOString()
     // Ensure updatedAt is different from createdAt and varies based on order status
     const createdDate = new Date(createdAt)
@@ -676,13 +686,11 @@ function ensureSeedData() {
     let deliveryEta = o.deliveryEta ?? mkDate(35 + (i % 15))
     ;({ oemEta, upfitterEta, deliveryEta } = enforceEtaPolicy({ createdAt, status, oemEta, upfitterEta, deliveryEta }))
     
-    // Determine buyer segment based on buyer name and inventory status
-    const buyerName = inventoryStatus === 'SOLD' ? (o.buyerName || generateFleetBuyerName(i)) : ''
-    const buyerSegment = o.buyerSegment || (() => {
-      if (inventoryStatus === 'STOCK') return 'Dealer'
-      if (buyerName.includes('Fleet') || buyerName.includes('LLC') || buyerName.includes('Corp') || buyerName.includes('Inc')) return 'Fleet'
-      return 'Retail'
-    })()
+    // Enforce strict relationship: Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+    // Always set buyerSegment based on inventoryStatus
+    const buyerSegment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+    // Always set buyerName based on buyerSegment
+    const buyerName = buyerSegment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(i)) : ''
     
     // Generate actual completion dates for completed stages
     const statusIdx = ORDER_FLOW.indexOf(status)
@@ -794,9 +802,13 @@ function ensureSeedData() {
     // Sprinkle ON_TIME near-term deliveries for variety
     let deliveryEta = (idx % 8 === 2) ? mkDate(4 + (idx % 3)) : mkDate(35 + (idx % 15))
     ;({ oemEta, upfitterEta, deliveryEta } = enforceEtaPolicy({ createdAt, status, oemEta, upfitterEta, deliveryEta }))
-    const buyerName = Math.random() > 0.5 ? generateFleetBuyerName(idx) : ''
-    const inventoryStatus = Math.random() > 0.5 ? 'STOCK' : 'SOLD'
-    const buyerSegment = inventoryStatus === 'STOCK' ? 'Dealer' : (buyerName.includes('Fleet') || buyerName.includes('LLC') || buyerName.includes('Corp') || buyerName.includes('Inc') ? 'Fleet' : 'Retail')
+    // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+    // Shift pattern so first orders have buyers
+    const inventoryStatus = ((idx + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
+    // Stock orders = Dealer, Orders with buyers = Fleet
+    const buyerSegment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+    // Ensure buyerName matches buyerSegment: Fleet = has buyer name, Dealer = blank
+    const buyerName = buyerSegment === 'Fleet' ? generateFleetBuyerName(idx) : ''
     const statusIdx = ORDER_FLOW.indexOf(status)
     const actualOemCompleted = (statusIdx >= ORDER_FLOW.indexOf('OEM_IN_TRANSIT')) ? mkDate(-(idx % 10 + 5)) : null
     const actualUpfitterCompleted = (statusIdx >= ORDER_FLOW.indexOf('UPFIT_IN_PROGRESS')) ? mkDate(-(idx % 8 + 2)) : null
@@ -923,9 +935,11 @@ function ensureSeedData() {
           return users[(idx + 1) % users.length]
         })(),
         buyerSegment: (() => {
-          const buyerName = Math.random() > 0.5 ? generateFleetBuyerName(idx + 100) : ''
-          const inventoryStatus = Math.random() > 0.5 ? 'STOCK' : 'SOLD'
-          return inventoryStatus === 'STOCK' ? 'Dealer' : (buyerName.includes('Fleet') || buyerName.includes('LLC') || buyerName.includes('Corp') || buyerName.includes('Inc') ? 'Fleet' : 'Retail')
+          // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+          // Shift pattern so first orders have buyers
+          const inventoryStatus = ((idx + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
+          // Stock orders = Dealer, Orders with buyers = Fleet
+          return inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
         })(),
         priority: (() => {
           const priorities = ['Low', 'Normal', 'High', 'Urgent']
@@ -950,10 +964,17 @@ function ensureSeedData() {
         },
         pricingJson: null, // Will be generated below
         inventoryStatus: (() => {
-          return Math.random() > 0.5 ? 'STOCK' : 'SOLD'
+          // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+          // Shift pattern so first orders have buyers
+          return ((idx + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
         })(),
-        isStock: Math.random() > 0.5,
-        buyerName: Math.random() > 0.5 ? generateFleetBuyerName(idx + 100) : '',
+        isStock: ((idx + 1) % 4 === 0),
+        buyerName: (() => {
+          // Ensure buyerName matches buyerSegment: Fleet = has buyer name, Dealer = blank
+          const inventoryStatus = ((idx + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
+          const buyerSegment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+          return buyerSegment === 'Fleet' ? generateFleetBuyerName(idx + 100) : ''
+        })(),
         listingStatus: null,
         dealerWebsiteStatus: ((idx % 9) === 0 ? 'PUBLISHED' : (idx % 9) === 1 ? 'UNPUBLISHED' : 'DRAFT'),
         createdAt: mkDate(-(10 + idx)),
@@ -1024,9 +1045,11 @@ function sanitizeExisting(rawOrders) {
     const upfitterId = o.upfitterId || up.id
     const upfitterName = (o.buildJson?.upfitter?.name && !/demo/i.test(o.buildJson.upfitter.name)) ? o.buildJson.upfitter.name : up.name
     // Force a good mix of stock/sold deterministically if not set
+    // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+    // Shift pattern so first orders have buyers
     let inventoryStatus = (o.inventoryStatus ? String(o.inventoryStatus).toUpperCase() : '')
     if (inventoryStatus !== 'STOCK' && inventoryStatus !== 'SOLD') {
-      inventoryStatus = (i % 2 === 0) ? 'STOCK' : 'SOLD'
+      inventoryStatus = ((i + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
     }
     if (inventoryStatus === 'STOCK') stockCount++
     const status = o.status || 'CONFIG_RECEIVED'
@@ -1095,7 +1118,7 @@ function sanitizeExisting(rawOrders) {
       },
       inventoryStatus,
       isStock: inventoryStatus === 'STOCK',
-      buyerName: inventoryStatus === 'SOLD' ? (o.buyerName || generateFleetBuyerName(i)) : '',
+      buyerName: '', // Will be set based on buyerSegment below
       dealerWebsiteStatus: (o.dealerWebsiteStatus ?? (o.listingStatus === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')),
       createdAt,
       updatedAt,
@@ -1108,9 +1131,11 @@ function sanitizeExisting(rawOrders) {
         const users = ['Sarah Johnson', 'Mike Chen', 'Taylor Steele', 'Alex Rivera', 'Jordan Smith', 'Casey Williams', 'Morgan Davis']
         return users[(i + 1) % users.length]
       })(),
-      buyerSegment: o.buyerSegment || (() => {
-        const buyerName = inventoryStatus === 'SOLD' ? (o.buyerName || generateFleetBuyerName(i)) : ''
-        return inventoryStatus === 'STOCK' ? 'Dealer' : (buyerName?.includes('Fleet') || buyerName?.includes('LLC') || buyerName?.includes('Corp') || buyerName?.includes('Inc') ? 'Fleet' : 'Retail')
+      // Enforce strict relationship: Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+      buyerSegment: inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet',
+      buyerName: (() => {
+        const segment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+        return segment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(i)) : ''
       })(),
       priority: o.priority || (() => {
         const priorities = ['Low', 'Normal', 'High', 'Urgent']
@@ -1138,8 +1163,8 @@ function sanitizeExisting(rawOrders) {
     }
     return result
   }).filter(o => !/demo/i.test(o.id) && !/demo/i.test(o.dealerCode) && !/demo/i.test(o.buildJson?.upfitter?.name || ''))
-  // Ensure at least ~40% stock in the final set
-  const targetStock = Math.ceil(cleaned.length * 0.5)
+  // Ensure at least ~25% stock in the final set (75% have buyers)
+  const targetStock = Math.ceil(cleaned.length * 0.25)
   if (stockCount < targetStock) {
     for (let i = 0; i < cleaned.length && stockCount < targetStock; i++) {
       if (cleaned[i].inventoryStatus === 'SOLD') {
@@ -1149,6 +1174,11 @@ function sanitizeExisting(rawOrders) {
       }
     }
   }
+  // Final enforcement: Always ensure buyerSegment and buyerName match inventoryStatus
+  cleaned.forEach(o => {
+    o.buyerSegment = o.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+    o.buyerName = o.buyerSegment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(cleaned.indexOf(o))) : ''
+  })
   return cleaned
 }
 
@@ -1339,9 +1369,11 @@ function buildEphemeralOrders(count = 24) {
         upfitter: { id: 'knapheide-detroit', name: 'Knapheide Detroit' },
       },
       pricingJson: null, // Will be generated below
-      inventoryStatus: i % 2 ? 'SOLD' : 'STOCK',
-      isStock: i % 2 === 0,
-      buyerName: i % 2 ? generateFleetBuyerName(i) : '',
+      // Make 75% of orders have buyers (not stock) - 25% stock, 75% sold
+      // Shift pattern so first orders have buyers
+      inventoryStatus: ((i + 1) % 4 === 0) ? 'STOCK' : 'SOLD',
+      isStock: ((i + 1) % 4 === 0),
+      buyerName: '', // Will be set based on buyerSegment below
       listingStatus: null,
       dealerWebsiteStatus: (i % 3 === 0 ? 'PUBLISHED' : i % 3 === 1 ? 'UNPUBLISHED' : 'DRAFT'),
       createdAt,
@@ -1351,6 +1383,9 @@ function buildEphemeralOrders(count = 24) {
     }
     // Generate varied pricing based on order configuration
     row.pricingJson = generatePricing(row, i)
+    // Set buyerSegment and ensure buyerName matches
+    row.buyerSegment = row.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
+    row.buyerName = row.buyerSegment === 'Fleet' ? generateFleetBuyerName(i) : ''
     rows.push(row)
   }
   return rows
@@ -1455,10 +1490,19 @@ export async function setInventoryStatus(id, status, buyerName = '') {
   const current = orders[idx]
   const now = new Date().toISOString()
   const isStock = normalized === 'STOCK'
+  // Enforce strict relationship: Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+  const buyerSegment = isStock ? 'Dealer' : 'Fleet'
   const resolvedBuyer = isStock ? '' : (buyerName || current.buyerName || generateFleetBuyerName(idx + 11))
-  orders[idx] = { ...current, inventoryStatus: normalized, isStock, buyerName: resolvedBuyer, updatedAt: now }
+  orders[idx] = { 
+    ...current, 
+    inventoryStatus: normalized, 
+    isStock, 
+    buyerSegment,
+    buyerName: resolvedBuyer, 
+    updatedAt: now 
+  }
   writeOrders(orders)
-  return { ok: true, inventoryStatus: normalized, isStock, buyerName: resolvedBuyer }
+  return { ok: true, inventoryStatus: normalized, isStock, buyerSegment, buyerName: resolvedBuyer }
 }
 
 export async function publishListing(id) {
@@ -1516,8 +1560,10 @@ export async function intakeOrder(payload) {
     const orders = readLocal(LS_ORDERS, [])
     const now = new Date().toISOString()
     const id = `ord_${Math.random().toString(36).slice(2, 8)}`
-    const buyerName = payload.isStock ? '' : (payload.buyerName || generateFleetBuyerName(orders.length + 7))
-    const buyerSegment = payload.buyerSegment || (payload.isStock ? 'Dealer' : (buyerName.includes('Fleet') || buyerName.includes('LLC') || buyerName.includes('Corp') || buyerName.includes('Inc') ? 'Fleet' : 'Retail'))
+    // Stock orders = Dealer, Orders with buyers = Fleet
+    const buyerSegment = payload.buyerSegment || (payload.isStock ? 'Dealer' : 'Fleet')
+    // Ensure buyerName matches buyerSegment: Fleet = has buyer name, Dealer = blank
+    const buyerName = buyerSegment === 'Fleet' ? (payload.buyerName || generateFleetBuyerName(orders.length + 7)) : ''
     const baseOrder = {
       id,
       dealerCode: payload.dealerCode || 'DEMO',
@@ -1536,6 +1582,7 @@ export async function intakeOrder(payload) {
       tags: payload.tags || [],
       buildJson: payload.build ?? null,
       pricingJson: payload.pricing ?? null,
+      inventoryStatus: payload.isStock ? 'STOCK' : 'SOLD',
       isStock: Boolean(payload.isStock),
       buyerName,
       listingStatus: null,

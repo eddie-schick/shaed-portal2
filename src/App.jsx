@@ -32,6 +32,7 @@ import { ConfiguratorPricing } from './pages/ConfiguratorPricing.jsx'
 import { ConfiguratorReview } from './pages/ConfiguratorReview.jsx'
 import { OrdersPage } from './pages/Orders.jsx'
 import { OrderDetailPage } from './pages/OrderDetail.jsx'
+import { DocumentationPage } from './pages/Documentation.jsx'
 import { loadConfiguration, saveConfiguration, configToQuery, parseQueryToConfig } from './lib/configurationStore.js'
 
 // Frontend-only demo: all data is mocked locally
@@ -643,17 +644,6 @@ function Configurator() {
   return null
 }
 
-// Documentation Page (placeholder)
-function DocumentationPage() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="text-center py-24 border rounded-lg bg-white">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Documentation</h1>
-        <p className="text-gray-600">Documentation coming Soon</p>
-      </div>
-    </div>
-  )
-}
 
 // Global Footer
 function Footer() {
@@ -703,7 +693,8 @@ function App() {
             <Route path="/configurator/upfitter" element={<ConfiguratorUpfitter />} />
             <Route path="/configurator/pricing" element={<ConfiguratorPricing />} />
             <Route path="/configurator/review" element={<ConfiguratorReview />} />
-          <Route path="/documentation" element={<DocumentationPage />} />
+            <Route path="/documentation" element={<DocumentationPage />} />
+            <Route path="/documentation/deal-jacket/:id" element={<DocumentationPage />} />
           </Routes>
         </main>
         <Footer />

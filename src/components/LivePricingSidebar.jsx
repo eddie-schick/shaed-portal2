@@ -135,12 +135,7 @@ export function LivePricingSidebar({
                                 : ''
                           }`}
                         >
-                          <div className="flex items-center justify-between w-full">
-                            <span>{bt}</span>
-                            {!allowed && (
-                              <span className="text-xs text-gray-400 ml-2">Not available</span>
-                            )}
-                          </div>
+                          {bt}
                         </SelectItem>
                       )
                     })}

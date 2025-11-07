@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import fs from 'fs/promises'
 import { fileURLToPath } from 'url'
@@ -255,7 +254,6 @@ function orderApiMiddleware(server) {
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(),
     // Dev server API
     {
       name: 'ford-order-api',

@@ -178,6 +178,14 @@ export function OrdersPage() {
     labor: { min: '', max: '' },
     freight: { min: '', max: '' },
     total: { min: '', max: '' },
+    buyerSegment: new Set(),
+    priority: new Set(),
+    tags: new Set(),
+    actualOemCompleted: { from: '', to: '' },
+    actualUpfitterCompleted: { from: '', to: '' },
+    actualDeliveryCompleted: { from: '', to: '' },
+    createdBy: new Set(),
+    updatedBy: new Set(),
   }
   const [columnFilters, setColumnFilters] = useState(initialColumnFilters)
   const hasAnyFilters = useMemo(() => {
@@ -192,7 +200,10 @@ export function OrdersPage() {
       hasSet(f.series) || hasSet(f.cab) || hasSet(f.drivetrain) || hasSet(f.wheelbase) || hasSet(f.gvwr) ||
       hasSet(f.powertrain) || hasSet(f.bodyLength) || hasSet(f.bodyMaterial) ||
       hasNumRange(f.chassisMsrp) || hasNumRange(f.bodyPrice) || hasNumRange(f.optionsPrice) ||
-      hasNumRange(f.labor) || hasNumRange(f.freight) || hasNumRange(f.total)
+      hasNumRange(f.labor) || hasNumRange(f.freight) || hasNumRange(f.total) ||
+      hasSet(f.buyerSegment) || hasSet(f.priority) || hasSet(f.tags) ||
+      hasRange(f.actualOemCompleted) || hasRange(f.actualUpfitterCompleted) || hasRange(f.actualDeliveryCompleted) ||
+      hasSet(f.createdBy) || hasSet(f.updatedBy)
     )
   }, [columnFilters])
   const clearAllColumnFilters = () => {
@@ -369,6 +380,39 @@ export function OrdersPage() {
     const base = orders.length ? orders : allOrders
     return Array.from(new Set((base || []).map(o => o.buildJson?.bodySpecs?.material).filter(Boolean))).sort().map(v => ({ value: v, label: v }))
   }, [orders, allOrders])
+  const buyerSegmentOptions = useMemo(() => {
+    const base = orders.length ? orders : allOrders
+    return Array.from(new Set((base || []).map(o => {
+      const segment = o.buyerSegment || (o.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet')
+      return segment
+    }).filter(Boolean))).sort().map(v => ({ value: v, label: v }))
+  }, [orders, allOrders])
+  const priorityOptions = useMemo(() => {
+    return [
+      { value: 'Low', label: 'Low' },
+      { value: 'Normal', label: 'Normal' },
+      { value: 'High', label: 'High' },
+      { value: 'Urgent', label: 'Urgent' },
+    ]
+  }, [])
+  const tagsOptions = useMemo(() => {
+    const base = orders.length ? orders : allOrders
+    const allTags = new Set()
+    ;(base || []).forEach(o => {
+      if (Array.isArray(o.tags)) {
+        o.tags.forEach(tag => allTags.add(tag))
+      }
+    })
+    return Array.from(allTags).sort().map(v => ({ value: v, label: v }))
+  }, [orders, allOrders])
+  const createdByOptions = useMemo(() => {
+    const base = orders.length ? orders : allOrders
+    return Array.from(new Set((base || []).map(o => o.createdBy).filter(Boolean))).sort().map(v => ({ value: v, label: v }))
+  }, [orders, allOrders])
+  const updatedByOptions = useMemo(() => {
+    const base = orders.length ? orders : allOrders
+    return Array.from(new Set((base || []).map(o => o.updatedBy).filter(Boolean))).sort().map(v => ({ value: v, label: v }))
+  }, [orders, allOrders])
 
   // Filtering helpers
   const isInDateRange = (dateStr, range) => {
@@ -473,6 +517,29 @@ export function OrdersPage() {
     list = list.filter(o => isInNumberRange(o.pricingJson?.labor, f.labor))
     list = list.filter(o => isInNumberRange(o.pricingJson?.freight, f.freight))
     list = list.filter(o => isInNumberRange(o.pricingJson?.total, f.total))
+    if (f.buyerSegment?.size) {
+      list = list.filter(o => {
+        const segment = o.buyerSegment || (o.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet')
+        return f.buyerSegment.has(segment)
+      })
+    }
+    if (f.priority?.size) {
+      list = list.filter(o => {
+        const priority = o.priority || 'Normal'
+        return f.priority.has(priority)
+      })
+    }
+    if (f.tags?.size) {
+      list = list.filter(o => {
+        const tags = Array.isArray(o.tags) ? o.tags : []
+        return tags.some(tag => f.tags.has(tag))
+      })
+    }
+    list = list.filter(o => isInDateRange(o.actualOemCompleted, f.actualOemCompleted))
+    list = list.filter(o => isInDateRange(o.actualUpfitterCompleted, f.actualUpfitterCompleted))
+    list = list.filter(o => isInDateRange(o.actualDeliveryCompleted, f.actualDeliveryCompleted))
+    if (f.createdBy?.size) list = list.filter(o => f.createdBy.has(o.createdBy || ''))
+    if (f.updatedBy?.size) list = list.filter(o => f.updatedBy.has(o.updatedBy || ''))
     return list
   }, [orders, columnFilters])
 
@@ -729,12 +796,13 @@ export function OrdersPage() {
     { id: 'oemEta', label: 'Chassis ETA', width: 120, visible: true, pin: 'none' },
     { id: 'upfitterEta', label: 'Upfit ETA', width: 120, visible: true, pin: 'none' },
     { id: 'deliveryEta', label: 'Final ETA', width: 120, visible: true, pin: 'none' },
+    { id: 'buyer', label: 'Buyer', width: 200, visible: true, pin: 'none' },
     { id: 'deliveryStatus', label: 'Delivery Status', width: 160, visible: true, pin: 'none' },
     { id: 'inventoryStatus', label: 'Sales Status', width: 100, visible: true, pin: 'none' },
     { id: 'total', label: 'Total Price', width: 140, visible: true, pin: 'none' },
     // New enhanced fields
-    { id: 'buyerSegment', label: 'Buyer Segment', width: 120, visible: true, pin: 'none' },
-    { id: 'priority', label: 'Priority', width: 100, visible: true, pin: 'none' },
+    { id: 'buyerSegment', label: 'Buyer Type', width: 120, visible: true, pin: 'none' },
+    { id: 'priority', label: 'Priority', width: 100, visible: false, pin: 'none' },
     { id: 'tags', label: 'Tags', width: 150, visible: false, pin: 'none' },
     { id: 'actualOemCompleted', label: 'Actual OEM', width: 120, visible: false, pin: 'none' },
     { id: 'actualUpfitterCompleted', label: 'Actual Upfit', width: 120, visible: false, pin: 'none' },
@@ -743,7 +811,6 @@ export function OrdersPage() {
     { id: 'updatedBy', label: 'Updated By', width: 140, visible: false, pin: 'none' },
     // Additional columns available but hidden by default
     { id: 'vin', label: 'VIN', width: 180, visible: false, pin: 'none' },
-    { id: 'buyer', label: 'Buyer', width: 200, visible: false, pin: 'none' },
     { id: 'createdAt', label: 'Created', width: 120, visible: false, pin: 'none' },
     { id: 'dealerWebsite', label: 'Dealer Website', width: 140, visible: false, pin: 'none' },
     // Extra configurator/pricing fields (hidden by default)
@@ -1604,6 +1671,58 @@ export function OrdersPage() {
                     </HeaderWithFilter>
                   )
                 }
+                if (col.id === 'buyerSegment') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Buyer Type" isOpen={openFilter==='buyerSegment'} onOpen={() => setOpenFilter(openFilter==='buyerSegment'?'': 'buyerSegment')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={buyerSegmentOptions} selectedValues={columnFilters.buyerSegment} onApply={(vals) => { setColumnFilters(s => ({ ...s, buyerSegment: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, buyerSegment: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'priority') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Priority" isOpen={openFilter==='priority'} onOpen={() => setOpenFilter(openFilter==='priority'?'': 'priority')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={priorityOptions} selectedValues={columnFilters.priority} onApply={(vals) => { setColumnFilters(s => ({ ...s, priority: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, priority: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'tags') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Tags" isOpen={openFilter==='tags'} onOpen={() => setOpenFilter(openFilter==='tags'?'': 'tags')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={tagsOptions} selectedValues={columnFilters.tags} onApply={(vals) => { setColumnFilters(s => ({ ...s, tags: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, tags: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'total') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Total Price" isOpen={openFilter==='total'} onOpen={() => setOpenFilter(openFilter==='total'?'': 'total')} {...commonProps} extra={Resizer}>
+                      <NumberRangeDropdown value={columnFilters.total} onApply={(range) => { setColumnFilters(s => ({ ...s, total: range })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, total: { min: '', max: '' } })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'actualOemCompleted' || col.id === 'actualUpfitterCompleted' || col.id === 'actualDeliveryCompleted') {
+                  const titleMap = { actualOemCompleted: 'Actual OEM', actualUpfitterCompleted: 'Actual Upfit', actualDeliveryCompleted: 'Actual Delivery' }
+                  const key = col.id
+                  const stateKey = key
+                  return (
+                    <HeaderWithFilter key={col.id} title={titleMap[key]} isOpen={openFilter===key} onOpen={() => setOpenFilter(openFilter===key?'': key)} {...commonProps} extra={Resizer}>
+                      <DateRangeDropdown value={columnFilters[stateKey]} onApply={(range) => { setColumnFilters(s => ({ ...s, [stateKey]: range })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, [stateKey]: { from: '', to: '' } })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'createdBy') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Created By" isOpen={openFilter==='createdBy'} onOpen={() => setOpenFilter(openFilter==='createdBy'?'': 'createdBy')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={createdByOptions} selectedValues={columnFilters.createdBy} onApply={(vals) => { setColumnFilters(s => ({ ...s, createdBy: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, createdBy: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'updatedBy') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Updated By" isOpen={openFilter==='updatedBy'} onOpen={() => setOpenFilter(openFilter==='updatedBy'?'': 'updatedBy')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={updatedByOptions} selectedValues={columnFilters.updatedBy} onApply={(vals) => { setColumnFilters(s => ({ ...s, updatedBy: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, updatedBy: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
                 // Plain header for extra columns
                 return (
                   <th key={col.id} className="py-2 pr-4 text-center whitespace-nowrap relative sticky top-0 z-10 bg-white" draggable={!col.fixed} onDragStart={() => onHeaderDragStart(col.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => onHeaderDrop(col.id)}>
@@ -2018,6 +2137,31 @@ function DateRangeDropdown({ value, onApply, onClear }) {
       <div className="flex justify-end gap-2 mt-2">
         <button type="button" className="px-2 py-1 text-sm border rounded" onClick={onClear}>Clear</button>
         <button type="button" className="px-2 py-1 text-sm border rounded bg-blue-600 text-white" onClick={() => onApply({ from, to })}>Apply</button>
+      </div>
+    </div>
+  )
+}
+
+// Number range dropdown for table headers (for price columns)
+function NumberRangeDropdown({ value, onApply, onClear }) {
+  const [min, setMin] = useState(value?.min || '')
+  const [max, setMax] = useState(value?.max || '')
+
+  useEffect(() => {
+    setMin(value?.min || '')
+    setMax(value?.max || '')
+  }, [value])
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 w-full">
+        <input type="number" className="flex-1 min-w-0 border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Min" value={min} onChange={(e) => setMin(e.target.value)} />
+        <span className="text-gray-500 flex-none">to</span>
+        <input type="number" className="flex-1 min-w-0 border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Max" value={max} onChange={(e) => setMax(e.target.value)} />
+      </div>
+      <div className="flex justify-end gap-2 mt-2">
+        <button type="button" className="px-2 py-1 text-sm border rounded" onClick={onClear}>Clear</button>
+        <button type="button" className="px-2 py-1 text-sm border rounded bg-blue-600 text-white" onClick={() => onApply({ min, max })}>Apply</button>
       </div>
     </div>
   )

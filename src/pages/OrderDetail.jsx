@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { ChevronRight, Clock, MessageSquare, Users, Settings, BarChart3 } from 'lucide-react'
+import { ChevronRight, Clock, MessageSquare, Users, Settings, BarChart3, FileText } from 'lucide-react'
 
 // Helper to read from localStorage
 function readLocal(key, fallback) {
@@ -370,6 +370,19 @@ export function OrderDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
+      {/* Deal Jacket Link */}
+      <div className="mb-2 sm:mb-0">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={() => navigate(`/documentation/deal-jacket/${order.id}`)}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          View Deal Jacket
+        </Button>
+      </div>
+
       {/* 🧩 1. Header Summary */}
       <Card>
         <CardHeader>
@@ -428,7 +441,7 @@ export function OrderDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm pt-2 border-t">
               {order.buyerSegment && (
                 <div>
-                  <div className="text-xs text-gray-500 uppercase mb-1">Buyer Segment</div>
+                  <div className="text-xs text-gray-500 uppercase mb-1">Buyer Type</div>
                   <Badge variant={order.buyerSegment === 'Fleet' ? 'default' : order.buyerSegment === 'Retail' ? 'secondary' : 'outline'}>
                     {order.buyerSegment}
                   </Badge>
