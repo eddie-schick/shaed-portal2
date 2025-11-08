@@ -1096,11 +1096,9 @@ function DocumentCategorySection({ category, documents, orderId, onUpload, searc
         className="pb-3 sm:pb-6 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 min-w-0">
-            <CardTitle className="text-sm sm:text-base truncate">{category}</CardTitle>
-          </div>
-          <div className="self-start sm:self-auto flex items-center">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base truncate">{category}</CardTitle>
+          <div className="flex items-center">
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </div>

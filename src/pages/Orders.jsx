@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { createPortal } from 'react-dom'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { getOrders, getStatusLabel, publishListing, deleteOrders, setDealerWebsiteStatus, reseedDemoData, generateFleetBuyerName, generateDealerBuyerName } from '@/lib/orderApi'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -30,6 +31,7 @@ export function OrdersPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [needsAttention, setNeedsAttention] = useState(false)
+  const [expandedCards, setExpandedCards] = useState(new Set())
 
   // Get active tab from URL parameter, default to 'dashboards'
   const searchParams = new URLSearchParams(location.search)
@@ -684,6 +686,19 @@ export function OrdersPage() {
       return t === '' ? '-' : t
     }
     return String(value)
+  }
+
+  // Toggle expanded state for mobile cards
+  const toggleCardExpanded = (orderId) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId)
+      } else {
+        newSet.add(orderId)
+      }
+      return newSet
+    })
   }
 
   // Helper function to get column value for mobile cards
@@ -1497,112 +1512,141 @@ export function OrdersPage() {
           paginated.map((o) => {
             // Get visible columns excluding 'select', in the same order as Manage Data
             const mobileColumns = visibleColumns.filter(col => col.id !== 'select')
+            const isExpanded = expandedCards.has(o.id)
             
             return (
               <Card key={o.id} className="hover:shadow-md transition-shadow border border-gray-200">
                 <CardContent className="p-3">
-                  {/* Header Section - More Compact */}
-                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+                  {/* Header Section - Collapsed View (Always Visible) */}
+                  <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0 pr-2">
-                      <Link to={`/ordermanagement/${o.id}`} className="text-blue-600 hover:text-blue-700 font-semibold text-sm truncate block">
+                      <Link 
+                        to={`/ordermanagement/${o.id}`} 
+                        className="text-blue-600 hover:text-blue-700 font-semibold text-sm truncate block"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {o.id}
                       </Link>
                       {mobileColumns.some(col => col.id === 'stockNumber') && o.stockNumber && (
-                        <div className="text-xs text-gray-500 mt-0.5">#{o.stockNumber}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">Stock #{o.stockNumber}</div>
                       )}
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(o.id)}
-                      onChange={() => toggleSelected(o.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
-                      aria-label={`Select ${o.id}`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(o.id)}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          toggleSelected(o.id)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                        aria-label={`Select ${o.id}`}
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleCardExpanded(o.id)
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                        aria-label={isExpanded ? 'Collapse order details' : 'Expand order details'}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-gray-600" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-gray-600" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   
-                  {/* Fields in the same order as Manage Data - More Compact */}
-                  <div className="space-y-1.5">
-                    {mobileColumns.map((col) => {
-                      // Skip id and stockNumber as they're in the header
-                      if (col.id === 'id' || col.id === 'stockNumber') return null
+                  {/* Expanded Content - Only shown when expanded */}
+                  {isExpanded && (
+                    <>
+                      <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+                        {mobileColumns.map((col) => {
+                          // Skip id and stockNumber as they're in the header
+                          if (col.id === 'id' || col.id === 'stockNumber') return null
+                          
+                          const value = getColumnValue(o, col.id)
+                          if (!value || value === '' || value === '-') return null
+                          
+                          // Special handling for status fields - compact
+                          if (col.id === 'status') {
+                            return (
+                              <div key={col.id} className="pb-1.5 border-b border-gray-100">
+                                {statusPill(o.status)}
+                              </div>
+                            )
+                          }
+                          
+                          // Group badge-style fields together more compactly
+                          if (['inventoryStatus', 'deliveryStatus', 'buyerSegment', 'priority'].includes(col.id)) {
+                            const badgeValue = getColumnValue(o, col.id)
+                            if (!badgeValue || badgeValue === '') return null
+                            return (
+                              <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                                <span className="text-gray-600 font-medium">{col.label}:</span>
+                                <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                                  {badgeValue}
+                                </Badge>
+                              </div>
+                            )
+                          }
+                          
+                          // Special handling for VIN (monospace font) - compact
+                          if (col.id === 'vin') {
+                            return (
+                              <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                                <span className="text-gray-600 font-medium">{col.label}:</span>
+                                <span className="font-mono text-xs">{value}</span>
+                              </div>
+                            )
+                          }
+                          
+                          // Group ETA fields in a compact grid
+                          if (['oemEta', 'upfitterEta', 'deliveryEta'].includes(col.id)) {
+                            return (
+                              <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                                <span className="text-gray-600 font-medium">{col.label}:</span>
+                                <span className="text-right text-xs">{etaText(o[col.id])}</span>
+                              </div>
+                            )
+                          }
+                          
+                          // Special handling for date fields - compact
+                          if (['createdAt', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted'].includes(col.id)) {
+                            return (
+                              <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                                <span className="text-gray-600 font-medium">{col.label}:</span>
+                                <span className="text-right text-xs">{value}</span>
+                              </div>
+                            )
+                          }
+                          
+                          // Default field display - compact
+                          return (
+                            <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                              <span className="text-gray-600 font-medium truncate pr-2">{col.label}:</span>
+                              <span className="text-right font-medium truncate max-w-[55%] text-xs">{value}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
                       
-                      const value = getColumnValue(o, col.id)
-                      if (!value || value === '' || value === '-') return null
-                      
-                      // Special handling for status fields - compact
-                      if (col.id === 'status') {
-                        return (
-                          <div key={col.id} className="pb-1.5 border-b border-gray-100">
-                            {statusPill(o.status)}
-                          </div>
-                        )
-                      }
-                      
-                      // Group badge-style fields together more compactly
-                      if (['inventoryStatus', 'deliveryStatus', 'buyerSegment', 'priority'].includes(col.id)) {
-                        const badgeValue = getColumnValue(o, col.id)
-                        if (!badgeValue || badgeValue === '') return null
-                        return (
-                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
-                            <span className="text-gray-600 font-medium">{col.label}:</span>
-                            <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                              {badgeValue}
-                            </Badge>
-                          </div>
-                        )
-                      }
-                      
-                      // Special handling for VIN (monospace font) - compact
-                      if (col.id === 'vin') {
-                        return (
-                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
-                            <span className="text-gray-600 font-medium">{col.label}:</span>
-                            <span className="font-mono text-xs">{value}</span>
-                          </div>
-                        )
-                      }
-                      
-                      // Group ETA fields in a compact grid
-                      if (['oemEta', 'upfitterEta', 'deliveryEta'].includes(col.id)) {
-                        return (
-                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
-                            <span className="text-gray-600 font-medium">{col.label}:</span>
-                            <span className="text-right text-xs">{etaText(o[col.id])}</span>
-                          </div>
-                        )
-                      }
-                      
-                      // Special handling for date fields - compact
-                      if (['createdAt', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted'].includes(col.id)) {
-                        return (
-                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
-                            <span className="text-gray-600 font-medium">{col.label}:</span>
-                            <span className="text-right text-xs">{value}</span>
-                          </div>
-                        )
-                      }
-                      
-                      // Default field display - compact
-                      return (
-                        <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
-                          <span className="text-gray-600 font-medium truncate pr-2">{col.label}:</span>
-                          <span className="text-right font-medium truncate max-w-[55%] text-xs">{value}</span>
+                      {/* Action Footer - More Compact */}
+                      <div className="flex items-center justify-between pt-2 mt-1.5">
+                        <div className="flex-1">
+                          {mobileColumns.some(c => c.id === 'deliveryStatus') && (
+                            <div className="text-xs text-gray-500">{getDeliveryStatusLabel(o)}</div>
+                          )}
                         </div>
-                      )
-                    })}
-                  </div>
-                  
-                  {/* Action Footer - More Compact */}
-                  <div className="flex items-center justify-between pt-2 mt-1.5">
-                    <div className="flex-1">
-                      {mobileColumns.some(c => c.id === 'deliveryStatus') && (
-                        <div className="text-xs text-gray-500">{getDeliveryStatusLabel(o)}</div>
-                      )}
-                    </div>
-                    <Link to={`/ordermanagement/${o.id}`}>
-                      <Button size="sm" variant="outline" className="text-xs h-7 px-2">View</Button>
-                    </Link>
-                  </div>
+                        <Link to={`/ordermanagement/${o.id}`} onClick={(e) => e.stopPropagation()}>
+                          <Button size="sm" variant="outline" className="text-xs h-7 px-2">View</Button>
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )
