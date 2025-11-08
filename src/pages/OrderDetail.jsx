@@ -242,6 +242,13 @@ export function OrderDetailPage() {
     setRole(r === 'BUYER' ? 'BUYER' : 'INTERNAL')
   }, [])
 
+  // Scroll to top when navigating to order detail (especially important on mobile)
+  useEffect(() => {
+    if (id) {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+  }, [id])
+
   const nextLabel = useMemo(() => {
     if (!order) return null
     const idx = FLOW.indexOf(order.status)

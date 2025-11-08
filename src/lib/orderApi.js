@@ -32,13 +32,43 @@ export function generateFleetBuyerName(index = 0) {
   return `${base} ${suffix}`
 }
 
+// Generate plausible dealer buyer names
+export function generateDealerBuyerName(index = 0) {
+  const dealers = [
+    'Metro Ford',
+    'Capital City Ford',
+    'Riverside Ford',
+    'Summit Ford',
+    'Valley Ford',
+    'Coastal Ford',
+    'Mountain View Ford',
+    'Prairie Ford',
+    'Lakeside Ford',
+    'Highway Ford',
+    'Premier Ford',
+    'Elite Ford',
+    'Heritage Ford',
+    'Crown Ford',
+    'Royal Ford',
+    'Platinum Ford',
+    'Apex Ford',
+    'Pinnacle Ford',
+    'Horizon Ford',
+    'Sunset Ford',
+  ]
+  const suffixes = ['', ' Motors', ' Dealership', ' Auto', ' Commercial']
+  const base = dealers[index % dealers.length]
+  const suffix = suffixes[index % suffixes.length]
+  return `${base}${suffix}`
+}
+
 const LS_ORDERS = 'orders'
 const LS_EVENTS = 'orderEvents'
 const LS_NOTES = 'orderNotes'
 const LS_STOCK_SEQ = 'stockSequence'
 const LS_VIN_SEQ = 'vinSequence'
 const LS_SEED_VERSION = 'ordersSeedVersion'
-const CURRENT_SEED_VERSION = '2025-09-25-161' // Updated: strict enforcement of Stock=Dealer, SOLD=Fleet with buyer names
+const CURRENT_SEED_VERSION = '2025-09-25-163' // Updated: enforce correct buyer names matching buyer type (detect and fix mismatches)
 
 // Helper to get current user (for createdBy/updatedBy)
 function getCurrentUser() {
@@ -121,6 +151,71 @@ function ensureSequentialEtas({ oemEta, upfitterEta, deliveryEta }, gaps = { oem
     upfitterEta: dUpfit ? dUpfit.toISOString() : null,
     deliveryEta: dDelivery ? dDelivery.toISOString() : null,
   }
+}
+
+// Calculate order status based on today's date and ETAs
+// This ensures status aligns with the estimated lead times
+export function calculateStatusFromEtas(order) {
+  // Don't override CANCELED or DELIVERED statuses
+  if (order?.status === 'CANCELED' || order?.status === 'DELIVERED') {
+    return order.status
+  }
+
+  const now = new Date()
+  now.setHours(0, 0, 0, 0) // Normalize to start of day for comparison
+
+  const oemEta = order?.oemEta ? new Date(order.oemEta) : null
+  const upfitterEta = order?.upfitterEta ? new Date(order.upfitterEta) : null
+  const deliveryEta = order?.deliveryEta ? new Date(order.deliveryEta) : null
+
+  if (oemEta) oemEta.setHours(0, 0, 0, 0)
+  if (upfitterEta) upfitterEta.setHours(0, 0, 0, 0)
+  if (deliveryEta) deliveryEta.setHours(0, 0, 0, 0)
+
+  // Priority 1: If delivery ETA has passed, order should be DELIVERED
+  if (deliveryEta && now >= deliveryEta) {
+    return 'DELIVERED'
+  }
+
+  // Priority 2: If upfitter ETA has passed but delivery ETA hasn't, order should be READY_FOR_DELIVERY
+  if (upfitterEta && now >= upfitterEta) {
+    return 'READY_FOR_DELIVERY'
+  }
+
+  // Priority 3: If OEM ETA has passed but upfitter ETA hasn't, order is at upfitter
+  if (oemEta && now >= oemEta) {
+    // Check if we're close to upfitter ETA (within 3 days) to determine if in progress
+    if (upfitterEta) {
+      const daysUntilUpfit = Math.ceil((upfitterEta - now) / DAY_MS)
+      if (daysUntilUpfit <= 3 && daysUntilUpfit > 0) {
+        return 'UPFIT_IN_PROGRESS'
+      }
+    }
+    return 'AT_UPFITTER'
+  }
+
+  // Priority 4: If OEM ETA hasn't passed yet, determine early stage based on how close we are
+  if (oemEta) {
+    const daysUntilOem = Math.ceil((oemEta - now) / DAY_MS)
+    
+    // If very close to OEM ETA (within 5 days), likely in production or transit
+    if (daysUntilOem <= 5 && daysUntilOem > 0) {
+      // If within 2 days, likely in transit
+      if (daysUntilOem <= 2) {
+        return 'OEM_IN_TRANSIT'
+      }
+      // Otherwise in production
+      return 'OEM_PRODUCTION'
+    }
+    
+    // If more than 5 days away but less than 15, check if allocated
+    if (daysUntilOem <= 15 && daysUntilOem > 5) {
+      return 'OEM_ALLOCATED'
+    }
+  }
+
+  // Default to earliest stage if no ETAs or very early
+  return 'CONFIG_RECEIVED'
 }
 
 // Apply additional business rules on top of sequentiality
@@ -432,29 +527,49 @@ function seedDemoOrders(targetCount = 154) {
         manufacturer,
         chassis: { series, cab, drivetrain, wheelbase, gvwr: gvwrBySeries[series] || '', powertrain },
         bodySpecs: (() => {
-          switch (selectedBodyType) {
-            case 'Flatbed':
-              return { bedLength: [8,10,12,14,16,18,20][i % 7], material: i % 2 ? 'Steel' : 'Aluminum' }
-            case 'Dump Body':
-              return { bedLength: [8,10,12,14,16][i % 5], sideHeight: [24,36,48,60][i % 4], hoistType: ['Scissor','Telescopic','Dual Piston'][i % 3] }
-            case 'Dry Freight Body':
-              return { length: [12,14,16,18,20,22,24,26][i % 8], height: [84,90,96,102][i % 4], doorType: ['Roll-up','Swing','Roll-up with Side Door'][i % 3] }
-            case 'Refrigerated Body':
-              return { length: [12,14,16,18,20][i % 5], height: [84,90,96][i % 3], doorType: ['Roll-up','Swing'][i % 2] }
-            case 'Tow & Recovery':
-              return { type: ['Rollback','Integrated Wrecker','Carrier'][i % 3], capacity: ['8T','12T','16T'][i % 3] }
-            case 'Ambulance':
-              return { type: ['Type I','Type II','Type III'][i % 3], moduleLength: [144,156,168][i % 3] }
-            case 'Bucket':
-              return { workingHeight: [42,47,55][i % 3], platform: ['Telescopic','Articulating'][i % 2] }
-            case 'Contractor Body':
-              return { bedLength: [8,9,11,14][i % 4], material: i % 2 ? 'Steel' : 'Aluminum' }
-            case 'Service Body':
-              return { bodyLength: [8,9,11,14][i % 4], material: i % 2 ? 'Steel' : 'Aluminum' }
-            case 'Box w/ Lift Gate':
-              return { boxLength: [12,14,16,18,20][i % 5], liftgateType: ['Tuckaway','Rail Gate','Cantilever'][i % 3] }
-            default:
-              return { length: 12, material: 'Steel' }
+          // Normalize all body types to have both length and material (unless Chassis Only)
+          if (selectedBodyType === 'Chassis Only') {
+            return {}
+          }
+          
+          const baseSpecs = (() => {
+            switch (selectedBodyType) {
+              case 'Flatbed':
+                return { bedLength: [8,10,12,14,16,18,20][i % 7], material: i % 2 ? 'Steel' : 'Aluminum' }
+              case 'Dump Body':
+                return { bedLength: [8,10,12,14,16][i % 5], sideHeight: [24,36,48,60][i % 4], hoistType: ['Scissor','Telescopic','Dual Piston'][i % 3] }
+              case 'Dry Freight Body':
+                return { length: [12,14,16,18,20,22,24,26][i % 8], height: [84,90,96,102][i % 4], doorType: ['Roll-up','Swing','Roll-up with Side Door'][i % 3] }
+              case 'Refrigerated Body':
+                return { length: [12,14,16,18,20][i % 5], height: [84,90,96][i % 3], doorType: ['Roll-up','Swing'][i % 2] }
+              case 'Tow & Recovery':
+                return { type: ['Rollback','Integrated Wrecker','Carrier'][i % 3], capacity: ['8T','12T','16T'][i % 3] }
+              case 'Ambulance':
+                return { type: ['Type I','Type II','Type III'][i % 3], moduleLength: [144,156,168][i % 3] }
+              case 'Bucket':
+                return { workingHeight: [42,47,55][i % 3], platform: ['Telescopic','Articulating'][i % 2] }
+              case 'Contractor Body':
+                return { bedLength: [8,9,11,14][i % 4], material: i % 2 ? 'Steel' : 'Aluminum' }
+              case 'Service Body':
+                return { bodyLength: [8,9,11,14][i % 4], material: i % 2 ? 'Steel' : 'Aluminum' }
+              case 'Box w/ Lift Gate':
+                return { boxLength: [12,14,16,18,20][i % 5], liftgateType: ['Tuckaway','Rail Gate','Cantilever'][i % 3] }
+              default:
+                return { length: 12, material: 'Steel' }
+            }
+          })()
+          
+          // Normalize length property (bedLength, bodyLength, boxLength -> length)
+          const normalizedLength = baseSpecs.length || baseSpecs.bedLength || baseSpecs.bodyLength || baseSpecs.boxLength || 12
+          
+          // Ensure material exists (default to Steel if not present)
+          const normalizedMaterial = baseSpecs.material || 'Steel'
+          
+          // Return normalized specs with length and material, plus any other properties
+          return {
+            ...baseSpecs,
+            length: normalizedLength,
+            material: normalizedMaterial
           }
         })(),
         upfitter: { id: up.id, name: up.name },
@@ -538,9 +653,9 @@ function seedDemoOrders(targetCount = 154) {
     }
     
     // Final enforcement: Always ensure buyerSegment and buyerName match inventoryStatus
-    // Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+    // Stock = Dealer (with dealer name), SOLD = Fleet (with fleet name)
     baseOrder.buyerSegment = baseOrder.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
-    baseOrder.buyerName = baseOrder.buyerSegment === 'Fleet' ? (baseOrder.buyerName || generateFleetBuyerName(i)) : ''
+    baseOrder.buyerName = baseOrder.buyerSegment === 'Fleet' ? (baseOrder.buyerName || generateFleetBuyerName(i)) : (baseOrder.buyerName || generateDealerBuyerName(i))
     
     // Set actual completion dates for any delivered orders that don't have them
     if (baseOrder.status === 'DELIVERED' && !baseOrder.actualDeliveryCompleted) {
@@ -577,9 +692,9 @@ function seedDemoOrders(targetCount = 154) {
       baseOrder.updatedBy = users[(i + 1) % users.length]
     }
     // Final enforcement: Always ensure buyerSegment and buyerName match inventoryStatus
-    // Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+    // Stock = Dealer (with dealer name), SOLD = Fleet (with fleet name)
     baseOrder.buyerSegment = baseOrder.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
-    baseOrder.buyerName = baseOrder.buyerSegment === 'Fleet' ? generateFleetBuyerName(i) : ''
+    baseOrder.buyerName = baseOrder.buyerSegment === 'Fleet' ? generateFleetBuyerName(i) : generateDealerBuyerName(i)
     if (!baseOrder.priority) {
       const priorities = ['Low', 'Normal', 'High', 'Urgent']
       baseOrder.priority = priorities[i % priorities.length]
@@ -686,11 +801,11 @@ function ensureSeedData() {
     let deliveryEta = o.deliveryEta ?? mkDate(35 + (i % 15))
     ;({ oemEta, upfitterEta, deliveryEta } = enforceEtaPolicy({ createdAt, status, oemEta, upfitterEta, deliveryEta }))
     
-    // Enforce strict relationship: Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+    // Enforce strict relationship: Stock = Dealer (with dealer name), SOLD = Fleet (with fleet name)
     // Always set buyerSegment based on inventoryStatus
     const buyerSegment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
     // Always set buyerName based on buyerSegment
-    const buyerName = buyerSegment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(i)) : ''
+    const buyerName = buyerSegment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(i)) : (o.buyerName || generateDealerBuyerName(i))
     
     // Generate actual completion dates for completed stages
     const statusIdx = ORDER_FLOW.indexOf(status)
@@ -807,8 +922,8 @@ function ensureSeedData() {
     const inventoryStatus = ((idx + 1) % 4 === 0) ? 'STOCK' : 'SOLD'
     // Stock orders = Dealer, Orders with buyers = Fleet
     const buyerSegment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
-    // Ensure buyerName matches buyerSegment: Fleet = has buyer name, Dealer = blank
-    const buyerName = buyerSegment === 'Fleet' ? generateFleetBuyerName(idx) : ''
+    // Ensure buyerName matches buyerSegment: Fleet = fleet name, Dealer = dealer name
+    const buyerName = buyerSegment === 'Fleet' ? generateFleetBuyerName(idx) : generateDealerBuyerName(idx)
     const statusIdx = ORDER_FLOW.indexOf(status)
     const actualOemCompleted = (statusIdx >= ORDER_FLOW.indexOf('OEM_IN_TRANSIT')) ? mkDate(-(idx % 10 + 5)) : null
     const actualUpfitterCompleted = (statusIdx >= ORDER_FLOW.indexOf('UPFIT_IN_PROGRESS')) ? mkDate(-(idx % 8 + 2)) : null
@@ -1131,11 +1246,11 @@ function sanitizeExisting(rawOrders) {
         const users = ['Sarah Johnson', 'Mike Chen', 'Taylor Steele', 'Alex Rivera', 'Jordan Smith', 'Casey Williams', 'Morgan Davis']
         return users[(i + 1) % users.length]
       })(),
-      // Enforce strict relationship: Stock = Dealer (no buyer), SOLD = Fleet (with buyer)
+      // Enforce strict relationship: Stock = Dealer (with dealer name), SOLD = Fleet (with fleet name)
       buyerSegment: inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet',
       buyerName: (() => {
         const segment = inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
-        return segment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(i)) : ''
+        return segment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(i)) : (o.buyerName || generateDealerBuyerName(i))
       })(),
       priority: o.priority || (() => {
         const priorities = ['Low', 'Normal', 'High', 'Urgent']
@@ -1161,6 +1276,27 @@ function sanitizeExisting(rawOrders) {
     if (!result.pricingJson || (result.pricingJson?.chassisMsrp === 64000 && result.pricingJson?.bodyPrice === 21000 && result.pricingJson?.total === 91800)) {
       result.pricingJson = generatePricing(result, i)
     }
+    
+    // Normalize bodySpecs: ensure all orders (except Chassis Only) have both length and material
+    const bodyType = result.buildJson?.bodyType
+    if (bodyType && bodyType !== 'Chassis Only') {
+      const bodySpecs = result.buildJson?.bodySpecs || {}
+      // Normalize length property (bedLength, bodyLength, boxLength -> length)
+      const normalizedLength = bodySpecs.length || bodySpecs.bedLength || bodySpecs.bodyLength || bodySpecs.boxLength || 12
+      // Ensure material exists (default to Steel if not present)
+      const normalizedMaterial = bodySpecs.material || 'Steel'
+      
+      // Update bodySpecs with normalized values, preserving other properties
+      result.buildJson = {
+        ...result.buildJson,
+        bodySpecs: {
+          ...bodySpecs,
+          length: normalizedLength,
+          material: normalizedMaterial
+        }
+      }
+    }
+    
     return result
   }).filter(o => !/demo/i.test(o.id) && !/demo/i.test(o.dealerCode) && !/demo/i.test(o.buildJson?.upfitter?.name || ''))
   // Ensure at least ~25% stock in the final set (75% have buyers)
@@ -1175,9 +1311,30 @@ function sanitizeExisting(rawOrders) {
     }
   }
   // Final enforcement: Always ensure buyerSegment and buyerName match inventoryStatus
-  cleaned.forEach(o => {
+  // Helper to detect if a name looks like a fleet name
+  const looksLikeFleetName = (name) => {
+    if (!name) return false
+    const fleetIndicators = ['LLC', 'Inc', 'Corp', 'Ltd', 'PLC', 'Utilities', 'Services', 'Group', 'Communications', 'Logistics', 'Construction', 'Freight', 'Municipal']
+    return fleetIndicators.some(indicator => name.includes(indicator))
+  }
+  // Helper to detect if a name looks like a dealer name
+  const looksLikeDealerName = (name) => {
+    if (!name) return false
+    const dealerIndicators = ['Ford', 'Motors', 'Dealership', 'Auto', 'Commercial']
+    return dealerIndicators.some(indicator => name.includes(indicator))
+  }
+  
+  cleaned.forEach((o, idx) => {
     o.buyerSegment = o.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
-    o.buyerName = o.buyerSegment === 'Fleet' ? (o.buyerName || generateFleetBuyerName(cleaned.indexOf(o))) : ''
+    // Check if existing buyerName matches the buyerSegment type
+    const isFleet = o.buyerSegment === 'Fleet'
+    const existingName = o.buyerName || ''
+    const nameMatchesType = isFleet ? looksLikeFleetName(existingName) : looksLikeDealerName(existingName)
+    
+    // If buyerName doesn't match the type, regenerate it
+    if (!existingName || !nameMatchesType) {
+      o.buyerName = isFleet ? generateFleetBuyerName(idx) : generateDealerBuyerName(idx)
+    }
   })
   return cleaned
 }
@@ -1227,7 +1384,12 @@ export async function getOrders(params = {}) {
       const fallback = buildEphemeralOrders(48)
       // Persist fallback so detail links work
       writeOrders(fallback)
-      return { orders: filterOrders(fallback, params) }
+      // Apply status calculation based on ETAs
+      const fallbackWithStatus = fallback.map(order => ({
+        ...order,
+        status: calculateStatusFromEtas(order)
+      }))
+      return { orders: filterOrders(fallbackWithStatus, params) }
     }
   }
   let filtered = filterOrders(orders, params)
@@ -1241,9 +1403,43 @@ export async function getOrders(params = {}) {
       const fallback = buildEphemeralOrders(48)
       // Persist fallback so detail links work
       writeOrders(fallback)
-      filtered = filterOrders(fallback, params)
+      // Apply status calculation based on ETAs
+      const fallbackWithStatus = fallback.map(order => ({
+        ...order,
+        status: calculateStatusFromEtas(order)
+      }))
+      filtered = filterOrders(fallbackWithStatus, params)
     }
   }
+  // Apply status calculation based on ETAs for all orders
+  filtered = filtered.map(order => {
+    const normalized = {
+      ...order,
+      status: calculateStatusFromEtas(order)
+    }
+    
+    // Normalize bodySpecs: ensure all orders (except Chassis Only) have both length and material
+    const bodyType = normalized.buildJson?.bodyType
+    if (bodyType && bodyType !== 'Chassis Only') {
+      const bodySpecs = normalized.buildJson?.bodySpecs || {}
+      // Normalize length property (bedLength, bodyLength, boxLength -> length)
+      const normalizedLength = bodySpecs.length || bodySpecs.bedLength || bodySpecs.bodyLength || bodySpecs.boxLength || 12
+      // Ensure material exists (default to Steel if not present)
+      const normalizedMaterial = bodySpecs.material || 'Steel'
+      
+      // Update bodySpecs with normalized values, preserving other properties
+      normalized.buildJson = {
+        ...normalized.buildJson,
+        bodySpecs: {
+          ...bodySpecs,
+          length: normalizedLength,
+          material: normalizedMaterial
+        }
+      }
+    }
+    
+    return normalized
+  })
   return { orders: filtered }
 }
 
@@ -1262,6 +1458,11 @@ export async function getOrder(id) {
   if (!order) {
     const ensured = await ensureDemoOrder(id)
     return ensured
+  }
+  // Apply status calculation based on ETAs
+  order = {
+    ...order,
+    status: calculateStatusFromEtas(order)
   }
   const events = readLocal(LS_EVENTS, []).filter(e => e.orderId === order.id)
   return { order, events }
@@ -1300,7 +1501,8 @@ export async function ensureDemoOrder(id) {
       pricingJson: null, // Will be generated below
       inventoryStatus: 'STOCK',
       isStock: true,
-      buyerName: '',
+      buyerSegment: 'Dealer',
+      buyerName: generateDealerBuyerName(0),
       listingStatus: null,
       dealerWebsiteStatus: 'DRAFT',
       createdAt: now,
@@ -1316,6 +1518,11 @@ export async function ensureDemoOrder(id) {
     events.push({ id: `evt_${stub.id}`, orderId: stub.id, from: '', to: 'CONFIG_RECEIVED', at: now })
     writeLocal(LS_EVENTS, events)
     order = stub
+  }
+  // Apply status calculation based on ETAs
+  order = {
+    ...order,
+    status: calculateStatusFromEtas(order)
   }
   const events = readLocal(LS_EVENTS, []).filter(e => e.orderId === order.id)
   return { order, events }
@@ -1385,7 +1592,7 @@ function buildEphemeralOrders(count = 24) {
     row.pricingJson = generatePricing(row, i)
     // Set buyerSegment and ensure buyerName matches
     row.buyerSegment = row.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'
-    row.buyerName = row.buyerSegment === 'Fleet' ? generateFleetBuyerName(i) : ''
+    row.buyerName = row.buyerSegment === 'Fleet' ? generateFleetBuyerName(i) : generateDealerBuyerName(i)
     rows.push(row)
   }
   return rows
@@ -1562,8 +1769,8 @@ export async function intakeOrder(payload) {
     const id = `ord_${Math.random().toString(36).slice(2, 8)}`
     // Stock orders = Dealer, Orders with buyers = Fleet
     const buyerSegment = payload.buyerSegment || (payload.isStock ? 'Dealer' : 'Fleet')
-    // Ensure buyerName matches buyerSegment: Fleet = has buyer name, Dealer = blank
-    const buyerName = buyerSegment === 'Fleet' ? (payload.buyerName || generateFleetBuyerName(orders.length + 7)) : ''
+    // Ensure buyerName matches buyerSegment: Fleet = fleet name, Dealer = dealer name
+    const buyerName = buyerSegment === 'Fleet' ? (payload.buyerName || generateFleetBuyerName(orders.length + 7)) : (payload.buyerName || generateDealerBuyerName(orders.length + 7))
     const baseOrder = {
       id,
       dealerCode: payload.dealerCode || 'DEMO',

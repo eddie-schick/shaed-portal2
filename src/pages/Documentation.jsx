@@ -245,12 +245,12 @@ function PaperX() {
 
           {/* KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
-            {/* Total Requests */}
+            {/* Documents Processed */}
             <Card>
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col items-center justify-center text-center">
-                  <p className="text-sm sm:text-base text-gray-600 mb-2">Total Requests</p>
-                  <p className="text-3xl sm:text-4xl font-bold">1,683</p>
+                  <p className="text-sm sm:text-base text-gray-600 mb-2">Documents Processed</p>
+                  <p className="text-3xl sm:text-4xl font-bold">79,834</p>
                 </div>
               </CardContent>
             </Card>
@@ -265,12 +265,12 @@ function PaperX() {
               </CardContent>
             </Card>
 
-            {/* Documents Processed */}
+            {/* Total Requests */}
             <Card>
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col items-center justify-center text-center">
-                  <p className="text-sm sm:text-base text-gray-600 mb-2">Documents Processed</p>
-                  <p className="text-3xl sm:text-4xl font-bold">79,834</p>
+                  <p className="text-sm sm:text-base text-gray-600 mb-2">Total Requests</p>
+                  <p className="text-3xl sm:text-4xl font-bold">1,683</p>
                 </div>
               </CardContent>
             </Card>
@@ -426,128 +426,479 @@ function DealJacketList() {
   )
 }
 
-// Function to generate and download a demo PDF
-function generateDemoPDF(documentName, fileName) {
-  // Create a simple HTML document that will be converted to PDF
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${documentName}</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 40px;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          h1 {
-            color: #1f2937;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
-          }
-          .section {
-            margin-bottom: 25px;
-          }
-          .section h2 {
-            color: #374151;
-            font-size: 18px;
-            margin-bottom: 10px;
-          }
-          .field {
-            margin-bottom: 12px;
-            padding: 8px;
-            background-color: #f9fafb;
-            border-left: 3px solid #3b82f6;
-          }
-          .field-label {
-            font-weight: 600;
-            color: #6b7280;
-            font-size: 12px;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-          }
-          .field-value {
-            color: #111827;
-            font-size: 14px;
-          }
-          .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
-            font-size: 12px;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
+// Helper function to format currency
+const fmt = (n) => `$${Math.round(n || 0).toLocaleString()}`
+
+// Helper function to format date
+const fmtDate = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  try {
+    return new Date(dateStr).toLocaleDateString()
+  } catch {
+    return dateStr
+  }
+}
+
+// Helper function to format date and time
+const fmtDateTime = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  try {
+    return new Date(dateStr).toLocaleString()
+  } catch {
+    return dateStr
+  }
+}
+
+// Helper function to generate customer contact information
+function getCustomerInfo(buyerName, orderId) {
+  if (!buyerName) {
+    return {
+      name: 'N/A',
+      contactPerson: 'N/A',
+      email: 'N/A',
+      phone: 'N/A',
+      address: 'N/A',
+      city: 'N/A',
+      state: 'N/A',
+      zip: 'N/A'
+    }
+  }
+  
+  // Generate consistent contact info based on buyer name
+  const nameParts = buyerName.split(' ')
+  const firstName = nameParts[0] || 'Contact'
+  const emailDomain = buyerName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
+  
+  // Generate consistent address based on order ID hash
+  const addressNum = (orderId?.charCodeAt(orderId.length - 1) || 0) % 900 + 100
+  const states = ['CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI']
+  const stateIndex = (orderId?.charCodeAt(0) || 0) % states.length
+  const cities = ['Los Angeles', 'Houston', 'Miami', 'New York', 'Chicago', 'Philadelphia', 'Columbus', 'Atlanta', 'Charlotte', 'Detroit']
+  const city = cities[stateIndex]
+  
+  return {
+    name: buyerName,
+    contactPerson: firstName,
+    email: `contact@${emailDomain}.com`,
+    phone: `(555) ${123 + (orderId?.charCodeAt(0) || 0) % 900}-${4567 + (orderId?.charCodeAt(orderId.length - 1) || 0) % 9000}`,
+    address: `${addressNum} Main Street`,
+    city: city,
+    state: states[stateIndex],
+    zip: `${10000 + (orderId?.charCodeAt(0) || 0) % 90000}`
+  }
+}
+
+// Helper function to generate dealer information
+function getDealerInfo(dealerCode) {
+  if (!dealerCode) {
+    return {
+      code: 'N/A',
+      name: 'N/A',
+      salesRep: 'N/A',
+      email: 'N/A',
+      phone: 'N/A',
+      address: 'N/A'
+    }
+  }
+  
+  return {
+    code: dealerCode,
+    name: `Ford Commercial Vehicle Center ${dealerCode}`,
+    salesRep: `Sales Rep ${dealerCode}`,
+    email: `sales@${dealerCode.toLowerCase()}.com`,
+    phone: `(555) ${234 + (dealerCode.charCodeAt(dealerCode.length - 1) || 0) % 900}-${5678 + (dealerCode.charCodeAt(0) || 0) % 9000}`,
+    address: '123 Commercial Vehicle Way, Detroit, MI 48201'
+  }
+}
+
+// Helper function to generate upfitter information
+function getUpfitterInfo(upfitter) {
+  if (!upfitter || !upfitter.name) {
+    return {
+      name: 'N/A',
+      contact: 'N/A',
+      email: 'N/A',
+      phone: 'N/A',
+      address: 'N/A'
+    }
+  }
+  
+  const nameParts = upfitter.name.split(' ')
+  const firstName = nameParts[0] || 'Contact'
+  const upfitterId = upfitter.id || upfitter.name.toLowerCase().replace(/\s+/g, '-')
+  
+  return {
+    name: upfitter.name,
+    contact: firstName,
+    email: `contact@${upfitterId}.com`,
+    phone: upfitter.phone || `(555) ${345 + (upfitterId.charCodeAt(0) || 0) % 900}-${6789 + (upfitterId.charCodeAt(upfitterId.length - 1) || 0) % 9000}`,
+    address: upfitter.address || `${upfitter.name.split(' - ')[1] || 'Detroit, MI'}`
+  }
+}
+
+// Function to generate document-specific content based on document type
+function generateDocumentContent(documentId, documentName, order) {
+  const build = order?.buildJson || {}
+  const pricing = order?.pricingJson || {}
+  const chassis = build?.chassis || {}
+  const bodySpecs = build?.bodySpecs || {}
+  const upfitter = build?.upfitter || {}
+  
+  // Get customer, dealer, and upfitter information
+  const customer = getCustomerInfo(order?.buyerName, order?.id)
+  const dealer = getDealerInfo(order?.dealerCode)
+  const upfitterInfo = getUpfitterInfo(upfitter)
+  
+  // Format body specs entries
+  const bodySpecEntries = Object.entries(bodySpecs)
+    .filter(([k, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => {
+      const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())
+      return `<div class="row"><span>${label}</span><span>${String(v)}</span></div>`
+    }).join('')
+
+  // Generate content based on document type
+  let content = ''
+
+  switch (documentId) {
+    case 'customer-approved-spec-quote':
+    case 'deal-recap':
+      content = `
+        <div class="card">
+          <h2>Order Information</h2>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Stock #</span><span>${order?.stockNumber || 'N/A'}</span></div>
+          <div class="row"><span>Order Date</span><span>${fmtDate(order?.createdAt)}</span></div>
+          <div class="row"><span>Status</span><span>${order?.status || 'N/A'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Customer Information</h2>
+          <div class="row"><span>Customer Name</span><span>${customer.name}</span></div>
+          <div class="row"><span>Contact Person</span><span>${customer.contactPerson}</span></div>
+          <div class="row"><span>Email</span><span>${customer.email}</span></div>
+          <div class="row"><span>Phone</span><span>${customer.phone}</span></div>
+          <div class="row"><span>Address</span><span>${customer.address}, ${customer.city}, ${customer.state} ${customer.zip}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Dealer Information</h2>
+          <div class="row"><span>Dealer Name</span><span>${dealer.name}</span></div>
+          <div class="row"><span>Sales Representative</span><span>${dealer.salesRep}</span></div>
+          <div class="row"><span>Email</span><span>${dealer.email}</span></div>
+          <div class="row"><span>Phone</span><span>${dealer.phone}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Chassis Specifications</h2>
+          <div class="row"><span>Series</span><span>${chassis?.series || '—'}</span></div>
+          <div class="row"><span>Cab</span><span>${chassis?.cab || '—'}</span></div>
+          <div class="row"><span>Drivetrain</span><span>${chassis?.drivetrain || '—'}</span></div>
+          <div class="row"><span>Wheelbase</span><span>${chassis?.wheelbase ? chassis.wheelbase + '"' : '—'}</span></div>
+          <div class="row"><span>Powertrain</span><span>${chassis?.powertrain || '—'}</span></div>
+          <div class="row"><span>GVWR</span><span>${chassis?.gvwr || '—'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Body Specifications</h2>
+          <div class="row"><span>Body Type</span><span>${build?.bodyType || '—'}</span></div>
+          <div class="row"><span>Manufacturer</span><span>${build?.manufacturer || '—'}</span></div>
+          ${bodySpecEntries || '<div class="muted">No body specifications available.</div>'}
+        </div>
+
+        <div class="card">
+          <h2>Upfitter/Installer</h2>
+          <div class="row"><span>Name</span><span>${upfitterInfo.name}</span></div>
+          <div class="row"><span>Contact Person</span><span>${upfitterInfo.contact}</span></div>
+          <div class="row"><span>Email</span><span>${upfitterInfo.email}</span></div>
+          <div class="row"><span>Phone</span><span>${upfitterInfo.phone}</span></div>
+          <div class="row"><span>Address</span><span>${upfitterInfo.address}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Pricing Summary</h2>
+          <div class="row"><span>Chassis MSRP</span><span class="amount">${fmt(pricing?.chassisMsrp || pricing?.chassisMSRP)}</span></div>
+          <div class="row"><span>Body & Equipment</span><span class="amount">${fmt(pricing?.bodyPrice)}</span></div>
+          ${pricing?.optionsPrice ? `<div class="row"><span>Options</span><span class="amount">${fmt(pricing.optionsPrice)}</span></div>` : ''}
+          <div class="row"><span>Labor/Install</span><span class="amount">${fmt(pricing?.labor || pricing?.laborPrice)}</span></div>
+          <div class="row"><span>Freight & Delivery</span><span class="amount">${fmt(pricing?.freight)}</span></div>
+          ${pricing?.subtotal ? `<div class="row"><span>Subtotal</span><span class="amount">${fmt(pricing.subtotal)}</span></div>` : ''}
+          ${pricing?.totalIncentives || (pricing?.incentives && pricing.incentives.length > 0) ? `<div class="row"><span>Incentives</span><span class="amount">-${fmt(pricing?.totalIncentives || 0)}</span></div>` : ''}
+          <div class="row"><span>Taxes</span><span class="amount">${fmt(pricing?.taxes)}</span></div>
+          <div class="row tot"><span>Total</span><span class="amount">${fmt(pricing?.total)}</span></div>
+        </div>
+      `
+      break
+
+    case 'customer-po':
+    case 'purchase-agreement':
+      content = `
+        <div class="card">
+          <h2>Purchase Order Information</h2>
+          <div class="row"><span>PO Number</span><span>${order?.stockNumber || order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Order Date</span><span>${fmtDate(order?.createdAt)}</span></div>
+          <div class="row"><span>Dealer Code</span><span>${order?.dealerCode || 'N/A'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Customer Information</h2>
+          <div class="row"><span>Customer Name</span><span>${customer.name}</span></div>
+          <div class="row"><span>Contact Person</span><span>${customer.contactPerson}</span></div>
+          <div class="row"><span>Email</span><span>${customer.email}</span></div>
+          <div class="row"><span>Phone</span><span>${customer.phone}</span></div>
+          <div class="row"><span>Shipping Address</span><span>${customer.address}</span></div>
+          <div class="row"><span>City, State ZIP</span><span>${customer.city}, ${customer.state} ${customer.zip}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Dealer Information</h2>
+          <div class="row"><span>Dealer Name</span><span>${dealer.name}</span></div>
+          <div class="row"><span>Sales Representative</span><span>${dealer.salesRep}</span></div>
+          <div class="row"><span>Email</span><span>${dealer.email}</span></div>
+          <div class="row"><span>Phone</span><span>${dealer.phone}</span></div>
+          <div class="row"><span>Address</span><span>${dealer.address}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Vehicle Information</h2>
+          <div class="row"><span>Make</span><span>Ford</span></div>
+          <div class="row"><span>Model</span><span>${chassis?.series || 'N/A'}</span></div>
+          <div class="row"><span>VIN</span><span>${order?.vin || 'Pending'}</span></div>
+          <div class="row"><span>Stock #</span><span>${order?.stockNumber || 'N/A'}</span></div>
+          <div class="row"><span>Cab</span><span>${chassis?.cab || '—'}</span></div>
+          <div class="row"><span>Drivetrain</span><span>${chassis?.drivetrain || '—'}</span></div>
+          <div class="row"><span>Wheelbase</span><span>${chassis?.wheelbase ? chassis.wheelbase + '"' : '—'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Pricing</h2>
+          <div class="row"><span>Chassis MSRP</span><span class="amount">${fmt(pricing?.chassisMsrp || pricing?.chassisMSRP)}</span></div>
+          <div class="row"><span>Body & Equipment</span><span class="amount">${fmt(pricing?.bodyPrice)}</span></div>
+          ${pricing?.optionsPrice ? `<div class="row"><span>Options</span><span class="amount">${fmt(pricing.optionsPrice)}</span></div>` : ''}
+          <div class="row"><span>Labor/Install</span><span class="amount">${fmt(pricing?.labor || pricing?.laborPrice)}</span></div>
+          <div class="row"><span>Freight & Delivery</span><span class="amount">${fmt(pricing?.freight)}</span></div>
+          ${pricing?.subtotal ? `<div class="row"><span>Subtotal</span><span class="amount">${fmt(pricing.subtotal)}</span></div>` : ''}
+          ${pricing?.totalIncentives || (pricing?.incentives && pricing.incentives.length > 0) ? `<div class="row"><span>Incentives</span><span class="amount">-${fmt(pricing?.totalIncentives || 0)}</span></div>` : ''}
+          <div class="row"><span>Taxes</span><span class="amount">${fmt(pricing?.taxes)}</span></div>
+          <div class="row tot"><span>Total Amount</span><span class="amount">${fmt(pricing?.total)}</span></div>
+        </div>
+      `
+      break
+
+    case 'oem-factory-invoice':
+      content = `
+        <div class="card">
+          <h2>Factory Invoice Information</h2>
+          <div class="row"><span>Invoice Number</span><span>INV-${order?.id?.toUpperCase() || 'N/A'}</span></div>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Invoice Date</span><span>${fmtDate(order?.actualOemCompleted || order?.oemEta || order?.createdAt)}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Dealer Information</h2>
+          <div class="row"><span>Dealer Name</span><span>${dealer.name}</span></div>
+          <div class="row"><span>Dealer Code</span><span>${dealer.code}</span></div>
+          <div class="row"><span>Address</span><span>${dealer.address}</span></div>
+          <div class="row"><span>Contact</span><span>${dealer.salesRep}</span></div>
+          <div class="row"><span>Email</span><span>${dealer.email}</span></div>
+          <div class="row"><span>Phone</span><span>${dealer.phone}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Vehicle Information</h2>
+          <div class="row"><span>VIN</span><span>${order?.vin || 'Pending'}</span></div>
+          <div class="row"><span>Make</span><span>Ford</span></div>
+          <div class="row"><span>Model</span><span>${chassis?.series || 'N/A'}</span></div>
+          <div class="row"><span>Stock #</span><span>${order?.stockNumber || 'N/A'}</span></div>
+          <div class="row"><span>Cab</span><span>${chassis?.cab || '—'}</span></div>
+          <div class="row"><span>Drivetrain</span><span>${chassis?.drivetrain || '—'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Invoice Details</h2>
+          <div class="row"><span>Chassis MSRP</span><span class="amount">${fmt(pricing?.chassisMsrp || pricing?.chassisMSRP)}</span></div>
+          <div class="row"><span>Freight</span><span class="amount">${fmt(pricing?.freight)}</span></div>
+          <div class="row tot"><span>Total Due</span><span class="amount">${fmt((pricing?.chassisMsrp || pricing?.chassisMSRP || 0) + (pricing?.freight || 0))}</span></div>
+        </div>
+      `
+      break
+
+    case 'oem-price-order-confirmation':
+      content = `
+        <div class="card">
+          <h2>Order Confirmation</h2>
+          <div class="row"><span>Confirmation #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Order Date</span><span>${fmtDate(order?.createdAt)}</span></div>
+          <div class="row"><span>Dealer Code</span><span>${order?.dealerCode || 'N/A'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Vehicle Configuration</h2>
+          <div class="row"><span>Series</span><span>${chassis?.series || '—'}</span></div>
+          <div class="row"><span>Cab</span><span>${chassis?.cab || '—'}</span></div>
+          <div class="row"><span>Drivetrain</span><span>${chassis?.drivetrain || '—'}</span></div>
+          <div class="row"><span>Wheelbase</span><span>${chassis?.wheelbase ? chassis.wheelbase + '"' : '—'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Pricing Confirmation</h2>
+          <div class="row"><span>Chassis MSRP</span><span class="amount">${fmt(pricing?.chassisMsrp || pricing?.chassisMSRP)}</span></div>
+          <div class="row"><span>Estimated Delivery</span><span>${fmtDate(order?.oemEta)}</span></div>
+        </div>
+      `
+      break
+
+    case 'customer-payment-remittance':
+      content = `
+        <div class="card">
+          <h2>Payment Information</h2>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Payment Date</span><span>${fmtDate(order?.createdAt)}</span></div>
+          <div class="row"><span>Amount Due</span><span class="amount">${fmt(pricing?.total)}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Customer Information</h2>
+          <div class="row"><span>Customer Name</span><span>${customer.name}</span></div>
+          <div class="row"><span>Contact Person</span><span>${customer.contactPerson}</span></div>
+          <div class="row"><span>Email</span><span>${customer.email}</span></div>
+          <div class="row"><span>Phone</span><span>${customer.phone}</span></div>
+          <div class="row"><span>Billing Address</span><span>${customer.address}, ${customer.city}, ${customer.state} ${customer.zip}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Payment Details</h2>
+          <div class="row"><span>Invoice Total</span><span class="amount">${fmt(pricing?.total)}</span></div>
+          <div class="row"><span>Payment Status</span><span>Received</span></div>
+          <div class="row"><span>Payment Method</span><span>Wire Transfer</span></div>
+          <div class="row"><span>Reference Number</span><span>PAY-${order?.id?.toUpperCase() || 'N/A'}</span></div>
+        </div>
+      `
+      break
+
+    case 'notarized-mso-title':
+      content = `
+        <div class="card">
+          <h2>Title Information</h2>
+          <div class="row"><span>VIN</span><span>${order?.vin || 'Pending'}</span></div>
+          <div class="row"><span>Make</span><span>Ford</span></div>
+          <div class="row"><span>Model</span><span>${chassis?.series || 'N/A'}</span></div>
+          <div class="row"><span>Model Year</span><span>${new Date(order?.createdAt || Date.now()).getFullYear()}</span></div>
+          <div class="row"><span>Stock #</span><span>${order?.stockNumber || 'N/A'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Owner Information</h2>
+          <div class="row"><span>Owner Name</span><span>${customer.name}</span></div>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Address</span><span>${customer.address}, ${customer.city}, ${customer.state} ${customer.zip}</span></div>
+          <div class="row"><span>Phone</span><span>${customer.phone}</span></div>
+        </div>
+      `
+      break
+
+    default:
+      // Generic document content
+      content = `
+        <div class="card">
+          <h2>Order Information</h2>
+          <div class="row"><span>Deal #</span><span>${order?.id || 'N/A'}</span></div>
+          <div class="row"><span>Stock #</span><span>${order?.stockNumber || 'N/A'}</span></div>
+          <div class="row"><span>Customer Name</span><span>${order?.buyerName || 'N/A'}</span></div>
+          <div class="row"><span>Dealer Code</span><span>${order?.dealerCode || 'N/A'}</span></div>
+          <div class="row"><span>Order Date</span><span>${fmtDate(order?.createdAt)}</span></div>
+          <div class="row"><span>Status</span><span>${order?.status || 'N/A'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Vehicle Information</h2>
+          <div class="row"><span>Make</span><span>Ford</span></div>
+          <div class="row"><span>Model</span><span>${chassis?.series || 'N/A'}</span></div>
+          <div class="row"><span>VIN</span><span>${order?.vin || 'Pending'}</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Document Details</h2>
+          <div class="row"><span>Document Type</span><span>${documentName}</span></div>
+          <div class="row"><span>Generated Date</span><span>${fmtDate(new Date().toISOString())}</span></div>
+          <div class="row"><span>Reference Number</span><span>${order?.id || 'N/A'}</span></div>
+        </div>
+      `
+  }
+
+  return content
+}
+
+// Function to generate and download a PDF (matching configurator format)
+async function generateDemoPDF(documentName, fileName, order, documentId) {
+  // Fetch and convert logo to base64 data URL (same as configurator)
+  let logoDataUrl = ''
+  try {
+    const logoUrl = '/SHAED Logo.png'
+    const response = await fetch(logoUrl)
+    if (response.ok) {
+      const blob = await response.blob()
+      const reader = new FileReader()
+      logoDataUrl = await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    }
+  } catch (error) {
+    console.warn('Could not load SHAED logo:', error)
+  }
+
+  // Generate document-specific content
+  const documentContent = generateDocumentContent(documentId, documentName, order || {})
+
+  // Create HTML document matching configurator format
+  const html = `<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>${documentName}</title>
+      <style>
+        body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color:#111827; }
+        h1 { font-size: 22px; margin: 8px 0 8px 0; }
+        h2 { font-size: 16px; margin: 16px 0 6px; }
+        .row { display:flex; justify-content: space-between; margin: 4px 0; }
+        .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin: 10px 0; }
+        .tot { font-weight: 700; font-size: 18px; }
+        .muted { color:#6b7280 }
+        .header { display:flex; align-items:center; justify-content: space-between; gap:12px; }
+        .logo { height:64px; width:auto; object-fit:contain; }
+        .amount { min-width: 140px; text-align: right; font-weight: 600; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
         <h1>${documentName}</h1>
-        
-        <div class="section">
-          <h2>Document Information</h2>
-          <div class="field">
-            <div class="field-label">Document Type</div>
-            <div class="field-value">${documentName}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">File Name</div>
-            <div class="field-value">${fileName}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">Generated Date</div>
-            <div class="field-value">${new Date().toLocaleDateString()}</div>
-          </div>
-        </div>
+        ${logoDataUrl ? `<img class="logo" src="${logoDataUrl}" alt="SHAED Logo" />` : ''}
+      </div>
+      <div class="muted">Date: ${new Date().toLocaleDateString()}</div>
+      ${order?.id ? `<div class="muted">Deal #: ${order.id}</div>` : ''}
 
-        <div class="section">
-          <h2>Sample Data</h2>
-          <div class="field">
-            <div class="field-label">Reference Number</div>
-            <div class="field-value">REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">Status</div>
-            <div class="field-value">Active</div>
-          </div>
-          <div class="field">
-            <div class="field-label">Description</div>
-            <div class="field-value">This is a demo document generated for demonstration purposes. It contains sample data and formatting to represent the actual document structure.</div>
-          </div>
-        </div>
+      ${documentContent}
+      <script>
+        window.onload = () => {
+          window.print();
+          setTimeout(() => window.close(), 500);
+        };
+      </script>
+    </body>
+  </html>`
 
-        <div class="section">
-          <h2>Additional Information</h2>
-          <div class="field">
-            <div class="field-label">Notes</div>
-            <div class="field-value">This document is part of the Deal Jacket documentation system. All information displayed here is for demonstration purposes only.</div>
-          </div>
-        </div>
-
-        <div class="footer">
-          <p>Generated by SHAED Deal Jacket System</p>
-          <p>This is a demo document - ${new Date().toLocaleString()}</p>
-        </div>
-      </body>
-    </html>
-  `
-
-  // Create a blob and download it
-  const blob = new Blob([htmlContent], { type: 'text/html' })
+  const blob = new Blob([html], { type: 'text/html' })
   const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName || `${documentName.replace(/\s+/g, '_')}.pdf`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  const win = window.open(url, '_blank')
+  return { success: !!win, filename: fileName || `${documentName.replace(/\s+/g, '_')}.pdf` }
 }
 
 // Document Upload Card Component
-function DocumentUploadCard({ document, orderId, onUpload }) {
+function DocumentUploadCard({ document, orderId, onUpload, order }) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadedFile, setUploadedFile] = useState(null)
 
@@ -599,11 +950,16 @@ function DocumentUploadCard({ document, orderId, onUpload }) {
     toast.success(`Document "${document.name}" uploaded successfully`)
   }
 
-  const handleDownload = (e) => {
+  const handleDownload = async (e) => {
     e.stopPropagation()
     if (uploadedFile) {
-      generateDemoPDF(uploadedFile.documentName, uploadedFile.fileName)
-      toast.success(`Downloading ${uploadedFile.fileName}`)
+      try {
+        await generateDemoPDF(uploadedFile.documentName, uploadedFile.fileName, order, uploadedFile.documentId)
+        toast.success(`Generating PDF for ${uploadedFile.documentName}`)
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        toast.error('Failed to generate PDF')
+      }
     }
   }
 
@@ -710,7 +1066,7 @@ function DocumentUploadCard({ document, orderId, onUpload }) {
 }
 
 // Document Category Section Component
-function DocumentCategorySection({ category, documents, orderId, onUpload, searchQuery = '' }) {
+function DocumentCategorySection({ category, documents, orderId, onUpload, searchQuery = '', order = null }) {
   const [isExpanded, setIsExpanded] = useState(false)
   
   // Filter documents based on search query
@@ -758,6 +1114,7 @@ function DocumentCategorySection({ category, documents, orderId, onUpload, searc
                 document={doc}
                 orderId={orderId}
                 onUpload={onUpload}
+                order={order}
               />
             ))}
           </div>
@@ -939,7 +1296,7 @@ function DealJacketDetail() {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 uppercase mb-1">Make</div>
-                  <div className="text-sm font-medium">ford</div>
+                  <div className="text-sm font-medium">Ford</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 uppercase mb-1">Model</div>
@@ -1056,7 +1413,7 @@ function DealJacketDetail() {
                   </div>
                   <div>
                     <div className="text-xs text-gray-500 uppercase mb-1">Make</div>
-                    <div className="text-sm font-medium">ford</div>
+                    <div className="text-sm font-medium">Ford</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500 uppercase mb-1">Model</div>
@@ -1084,6 +1441,7 @@ function DealJacketDetail() {
               orderId={id}
               onUpload={handleDocumentUpload}
               searchQuery={searchQuery}
+              order={order}
             />
           ))}
         </div>

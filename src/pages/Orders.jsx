@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { createPortal } from 'react-dom'
-import { getOrders, getStatusLabel, publishListing, deleteOrders, setDealerWebsiteStatus, reseedDemoData, generateFleetBuyerName } from '@/lib/orderApi'
+import { getOrders, getStatusLabel, publishListing, deleteOrders, setDealerWebsiteStatus, reseedDemoData, generateFleetBuyerName, generateDealerBuyerName } from '@/lib/orderApi'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -110,7 +110,7 @@ export function OrdersPage() {
       if (status === 'DELIVERED') deliveryEta = mkDate(-(7 + (i % 10)))
 
       const inventoryStatus = (i % 2 === 0 ? 'STOCK' : 'SOLD')
-      const buyerName = inventoryStatus === 'SOLD' ? generateFleetBuyerName(i) : ''
+      const buyerName = inventoryStatus === 'SOLD' ? generateFleetBuyerName(i) : generateDealerBuyerName(i)
       const dealerWebsiteStatus = ((i % 10) === 0 ? 'PUBLISHED' : (i % 10) === 1 ? 'UNPUBLISHED' : 'DRAFT')
 
       rows.push({
@@ -125,7 +125,7 @@ export function OrdersPage() {
           bodyType,
           manufacturer,
           chassis: { series, cab: (i % 3 === 0 ? 'Regular Cab' : i % 3 === 1 ? 'SuperCab' : 'Crew Cab'), drivetrain, wheelbase, gvwr: gvwrBySeries[series] || '', powertrain },
-          bodySpecs: { length: [10,12,14,16,18,20][i % 6], material: i % 2 ? 'Steel' : 'Aluminum' },
+          bodySpecs: bodyType === 'Chassis Only' ? {} : { length: [10,12,14,16,18,20][i % 6], material: i % 2 ? 'Steel' : 'Aluminum' },
           upfitter: { id: up.id, name: up.name },
         },
         pricingJson: { chassisMsrp: 60000 + (i % 6) * 1500, bodyPrice: 18000 + (i % 5) * 1200, optionsPrice: (i % 4) * 750, labor: 3000 + (i % 3) * 400, freight: 1500, incentives: [], taxes: 0, total: 90000 + (i % 20) * 500 },
@@ -167,6 +167,8 @@ export function OrdersPage() {
     bodyType: new Set(),
     manufacturer: new Set(),
     series: new Set(),
+    make: new Set(),
+    year: new Set(),
     cab: new Set(),
     drivetrain: new Set(),
     wheelbase: new Set(),
@@ -199,7 +201,7 @@ export function OrdersPage() {
       hasSet(f.id) || hasSet(f.stockNumber) || hasSet(f.status) || hasSet(f.vin) || hasSet(f.buyer) || hasSet(f.upfitter) ||
       hasRange(f.oemEta) || hasRange(f.upfitterEta) || hasRange(f.deliveryEta) || hasRange(f.createdAt) ||
       hasSet(f.inventoryStatus) || hasSet(f.deliveryStatus) || hasSet(f.listingStatus) || hasSet(f.bodyType) || hasSet(f.manufacturer) ||
-      hasSet(f.series) || hasSet(f.cab) || hasSet(f.drivetrain) || hasSet(f.wheelbase) || hasSet(f.gvwr) ||
+      hasSet(f.series) || hasSet(f.make) || hasSet(f.year) || hasSet(f.cab) || hasSet(f.drivetrain) || hasSet(f.wheelbase) || hasSet(f.gvwr) ||
       hasSet(f.powertrain) || hasSet(f.bodyLength) || hasSet(f.bodyMaterial) ||
       hasNumRange(f.chassisMsrp) || hasNumRange(f.bodyPrice) || hasNumRange(f.optionsPrice) ||
       hasNumRange(f.labor) || hasNumRange(f.freight) || hasNumRange(f.total) ||
@@ -314,7 +316,7 @@ export function OrdersPage() {
   }, [orders, allOrders])
   const buyerOptions = useMemo(() => {
     const base = orders.length ? orders : allOrders
-    return Array.from(new Set((base || []).map(o => (o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : '')).filter(Boolean))).sort().map(v => ({ value: v, label: v }))
+    return Array.from(new Set((base || []).map(o => o.buyerName || '').filter(Boolean))).sort().map(v => ({ value: v, label: v }))
   }, [orders, allOrders])
   const upfitterOptions = useMemo(() => {
     const base = orders.length ? orders : allOrders
@@ -381,6 +383,16 @@ export function OrdersPage() {
   const bodyMaterialOptions = useMemo(() => {
     const base = orders.length ? orders : allOrders
     return Array.from(new Set((base || []).map(o => o.buildJson?.bodySpecs?.material).filter(Boolean))).sort().map(v => ({ value: v, label: v }))
+  }, [orders, allOrders])
+  const makeOptions = useMemo(() => {
+    return [{ value: 'Ford', label: 'Ford' }]
+  }, [])
+  const yearOptions = useMemo(() => {
+    const base = orders.length ? orders : allOrders
+    const years = Array.from(new Set((base || []).map(o => {
+      return o.createdAt ? new Date(o.createdAt).getFullYear() : new Date().getFullYear()
+    }))).sort((a, b) => b - a).map(v => ({ value: String(v), label: String(v) }))
+    return years
   }, [orders, allOrders])
   const buyerSegmentOptions = useMemo(() => {
     const base = orders.length ? orders : allOrders
@@ -489,7 +501,7 @@ export function OrdersPage() {
     if (f.stockNumber?.size) list = list.filter(o => f.stockNumber.has(o.stockNumber))
     if (f.status?.size) list = list.filter(o => f.status.has(o.status))
     if (f.vin?.size) list = list.filter(o => f.vin.has(o.vin))
-    if (f.buyer?.size) list = list.filter(o => f.buyer.has(o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''))
+    if (f.buyer?.size) list = list.filter(o => f.buyer.has(o.buyerName || ''))
     if (f.upfitter?.size) list = list.filter(o => f.upfitter.has(o.buildJson?.upfitter?.name))
     list = list.filter(o => isInDateRange(o.oemEta, f.oemEta))
     list = list.filter(o => isInDateRange(o.upfitterEta, f.upfitterEta))
@@ -506,6 +518,13 @@ export function OrdersPage() {
     if (f.bodyType?.size) list = list.filter(o => f.bodyType.has(o.buildJson?.bodyType))
     if (f.manufacturer?.size) list = list.filter(o => f.manufacturer.has(o.buildJson?.manufacturer))
     if (f.series?.size) list = list.filter(o => f.series.has(o.buildJson?.chassis?.series))
+    if (f.make?.size) list = list.filter(o => f.make.has('Ford'))
+    if (f.year?.size) {
+      list = list.filter(o => {
+        const year = o.createdAt ? new Date(o.createdAt).getFullYear() : new Date().getFullYear()
+        return f.year.has(String(year))
+      })
+    }
     if (f.cab?.size) list = list.filter(o => f.cab.has(o.buildJson?.chassis?.cab))
     if (f.drivetrain?.size) list = list.filter(o => f.drivetrain.has(o.buildJson?.chassis?.drivetrain))
     if (f.wheelbase?.size) list = list.filter(o => f.wheelbase.has(o.buildJson?.chassis?.wheelbase))
@@ -552,11 +571,13 @@ export function OrdersPage() {
     o.status,
     getStatusLabel(o.status),
     o.vin,
-    (o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''),
+    o.buyerName || '',
     o.buildJson?.upfitter?.name,
     o.buildJson?.bodyType,
     o.buildJson?.manufacturer,
     o.buildJson?.chassis?.series,
+    'Ford',
+    o.createdAt ? new Date(o.createdAt).getFullYear() : new Date().getFullYear(),
     o.buildJson?.chassis?.cab,
     o.buildJson?.chassis?.drivetrain,
     o.buildJson?.chassis?.wheelbase,
@@ -682,7 +703,7 @@ export function OrdersPage() {
         return o.status === 'CONFIG_RECEIVED' ? '' : (o.vin || '')
       case 'buyer':
       case 'dealer':
-        return o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''
+        return o.buyerName || ''
       case 'upfitter':
         return o.buildJson?.upfitter?.name ?? ''
       case 'oemEta':
@@ -703,6 +724,10 @@ export function OrdersPage() {
         }
       case 'series':
         return ch.series ?? ''
+      case 'make':
+        return 'Ford'
+      case 'year':
+        return o.createdAt ? new Date(o.createdAt).getFullYear() : new Date().getFullYear()
       case 'cab':
         return ch.cab ?? ''
       case 'drivetrain':
@@ -790,20 +815,23 @@ export function OrdersPage() {
     { id: 'select', label: '', width: 44, visible: true, fixed: true, pin: 'left' },
     // Default visible order
     { id: 'id', label: 'Order ID', width: 160, visible: true, pin: 'none' },
+    { id: 'createdAt', label: 'Created', width: 120, visible: false, pin: 'none' },
     { id: 'stockNumber', label: 'Stock #', width: 120, visible: true, pin: 'none' },
     { id: 'status', label: 'Order Status', width: 140, visible: true, pin: 'none' },
+    { id: 'make', label: 'Make', width: 100, visible: true, pin: 'none' },
     { id: 'series', label: 'Model', width: 140, visible: true, pin: 'none' },
+    { id: 'year', label: 'Year', width: 100, visible: true, pin: 'none' },
     { id: 'bodyType', label: 'Body Type', width: 160, visible: true, pin: 'none' },
     { id: 'upfitter', label: 'Upfitter', width: 280, visible: true, pin: 'none' },
     { id: 'oemEta', label: 'Chassis ETA', width: 120, visible: true, pin: 'none' },
     { id: 'upfitterEta', label: 'Upfit ETA', width: 120, visible: true, pin: 'none' },
     { id: 'deliveryEta', label: 'Final ETA', width: 120, visible: true, pin: 'none' },
+    { id: 'buyerSegment', label: 'Buyer Type', width: 120, visible: true, pin: 'none' },
     { id: 'buyer', label: 'Buyer', width: 200, visible: true, pin: 'none' },
     { id: 'deliveryStatus', label: 'Delivery Status', width: 160, visible: true, pin: 'none' },
     { id: 'inventoryStatus', label: 'Sales Status', width: 100, visible: true, pin: 'none' },
     { id: 'total', label: 'Total Price', width: 140, visible: true, pin: 'none' },
     // New enhanced fields
-    { id: 'buyerSegment', label: 'Buyer Type', width: 120, visible: true, pin: 'none' },
     { id: 'priority', label: 'Priority', width: 100, visible: false, pin: 'none' },
     { id: 'tags', label: 'Tags', width: 150, visible: false, pin: 'none' },
     { id: 'actualOemCompleted', label: 'Actual OEM', width: 120, visible: false, pin: 'none' },
@@ -813,7 +841,6 @@ export function OrdersPage() {
     { id: 'updatedBy', label: 'Updated By', width: 140, visible: false, pin: 'none' },
     // Additional columns available but hidden by default
     { id: 'vin', label: 'VIN', width: 180, visible: false, pin: 'none' },
-    { id: 'createdAt', label: 'Created', width: 120, visible: false, pin: 'none' },
     { id: 'dealerWebsite', label: 'Dealer Website', width: 140, visible: false, pin: 'none' },
     // Extra configurator/pricing fields (hidden by default)
     { id: 'manufacturer', label: 'Body Mfg', width: 160, visible: false, pin: 'none' },
@@ -867,6 +894,83 @@ export function OrdersPage() {
         const idx = next.findIndex(c => c.id === 'status')
         if (idx >= 0) next = [...next.slice(0, idx + 1), vinCol, ...next.slice(idx + 1)]
         else next = [...next, vinCol]
+      }
+      // Inject Created column right after Order ID if it doesn't exist or is in wrong position
+      const createdAtIdx = next.findIndex(c => c.id === 'createdAt')
+      const idIdx = next.findIndex(c => c.id === 'id')
+      if (idIdx >= 0) {
+        if (createdAtIdx < 0) {
+          // Created column doesn't exist, add it after Order ID (hidden by default)
+          changed = true
+          const createdAtCol = { id: 'createdAt', label: 'Created', width: 120, visible: false, pin: 'none' }
+          next = [...next.slice(0, idIdx + 1), createdAtCol, ...next.slice(idIdx + 1)]
+        } else if (createdAtIdx !== idIdx + 1) {
+          // Created column exists but is not right after Order ID, move it
+          changed = true
+          const createdAtCol = next[createdAtIdx]
+          next = next.filter((_, i) => i !== createdAtIdx)
+          const newIdIdx = next.findIndex(c => c.id === 'id')
+          if (newIdIdx >= 0) {
+            next = [...next.slice(0, newIdIdx + 1), createdAtCol, ...next.slice(newIdIdx + 1)]
+          }
+        }
+        // Don't force Created column to be visible - respect user's preference
+      }
+      // Inject Make, Model (series), and Year columns in the correct order if they don't exist
+      // Order should be: Make, Model (series), Year
+      const seriesIdx = next.findIndex(c => c.id === 'series')
+      if (!next.some(c => c.id === 'make')) {
+        changed = true
+        const makeCol = { id: 'make', label: 'Make', width: 100, visible: true, pin: 'none' }
+        if (seriesIdx >= 0) {
+          // Insert Make before Model (series)
+          next = [...next.slice(0, seriesIdx), makeCol, ...next.slice(seriesIdx)]
+        } else {
+          // If series doesn't exist, try to find status and insert after it
+          const statusIdx = next.findIndex(c => c.id === 'status')
+          if (statusIdx >= 0) {
+            next = [...next.slice(0, statusIdx + 1), makeCol, ...next.slice(statusIdx + 1)]
+          } else {
+            next = [...next, makeCol]
+          }
+        }
+      }
+      if (!next.some(c => c.id === 'year')) {
+        changed = true
+        const yearCol = { id: 'year', label: 'Year', width: 100, visible: true, pin: 'none' }
+        const makeIdx = next.findIndex(c => c.id === 'make')
+        const updatedSeriesIdx = next.findIndex(c => c.id === 'series')
+        if (updatedSeriesIdx >= 0) {
+          // Insert Year after Model (series)
+          next = [...next.slice(0, updatedSeriesIdx + 1), yearCol, ...next.slice(updatedSeriesIdx + 1)]
+        } else if (makeIdx >= 0) {
+          // If series doesn't exist but make does, insert year after make
+          next = [...next.slice(0, makeIdx + 1), yearCol, ...next.slice(makeIdx + 1)]
+        } else {
+          next = [...next, yearCol]
+        }
+      }
+      // Ensure correct order: Make, Model (series), Year
+      const finalMakeIdx = next.findIndex(c => c.id === 'make')
+      const finalSeriesIdx = next.findIndex(c => c.id === 'series')
+      const finalYearIdx = next.findIndex(c => c.id === 'year')
+      if (finalMakeIdx >= 0 && finalSeriesIdx >= 0 && finalYearIdx >= 0) {
+        // Check if order is correct: Make should come before Series, Series should come before Year
+        if (finalMakeIdx > finalSeriesIdx || finalSeriesIdx > finalYearIdx) {
+          changed = true
+          // Remove all three
+          const makeCol = next[finalMakeIdx]
+          const seriesCol = next[finalSeriesIdx]
+          const yearCol = next[finalYearIdx]
+          next = next.filter((_, i) => i !== finalMakeIdx && i !== finalSeriesIdx && i !== finalYearIdx)
+          // Find insertion point (after status or at appropriate location)
+          const insertAfterIdx = next.findIndex(c => c.id === 'status')
+          if (insertAfterIdx >= 0) {
+            next = [...next.slice(0, insertAfterIdx + 1), makeCol, seriesCol, yearCol, ...next.slice(insertAfterIdx + 1)]
+          } else {
+            next = [...next, makeCol, seriesCol, yearCol]
+          }
+        }
       }
       return changed ? next : prev
     })
@@ -1033,7 +1137,7 @@ export function OrdersPage() {
           return o.status === 'CONFIG_RECEIVED' ? '' : (o.vin || '')
         case 'buyer':
         case 'dealer':
-          return o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''
+          return o.buyerName || ''
         case 'upfitter':
           return o.buildJson?.upfitter?.name ?? ''
         case 'oemEta':
@@ -1054,6 +1158,10 @@ export function OrdersPage() {
           }
         case 'series':
           return ch.series ?? ''
+        case 'make':
+          return 'Ford'
+        case 'year':
+          return o.createdAt ? new Date(o.createdAt).getFullYear() : new Date().getFullYear()
         case 'cab':
           return ch.cab ?? ''
         case 'drivetrain':
@@ -1190,7 +1298,7 @@ export function OrdersPage() {
 
       <Dialog open={customizeOpen} onOpenChange={(v) => { if (!v) { setCustomizeOpen(false); } else { setCustomizeOpen(true) } }}>
         <DialogContent 
-          className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-1rem)] overflow-y-auto !top-4 !left-[50%] !translate-x-[-50%] !translate-y-0 sm:!top-[50%] sm:!translate-y-[-50%] p-4 sm:p-6"
+          className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-1rem)] !top-4 !left-[50%] !translate-x-[-50%] !translate-y-0 sm:!top-[50%] sm:!translate-y-[-50%] p-4 sm:p-6 flex flex-col"
           onOpenAutoFocus={(e) => {
             // Prevent auto-focus on mobile devices
             if (isMobile) {
@@ -1198,75 +1306,172 @@ export function OrdersPage() {
             }
           }}
         >
-          <DialogHeader>
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <span className="sm:hidden">Manage Data</span>
               <span className="hidden sm:inline">Manage Columns</span>
               <span className="text-xs text-gray-500">Available ({(draftColumns||[]).filter(c => !c.visible && c.id !== 'select').length}) · Selected ({(draftColumns||[]).filter(c => c.visible).length})</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] gap-3 sm:gap-4">
-            <div className="w-full">
-              <div className="mb-2">
-                <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search columns…" value={availQ} onChange={(e) => setAvailQ(e.target.value)} aria-label="Search available columns" />
+          <div className="flex-1 overflow-y-auto min-h-0 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] gap-3 sm:gap-4 py-2">
+              <div className="w-full">
+                <div className="mb-2">
+                  <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search columns…" value={availQ} onChange={(e) => setAvailQ(e.target.value)} aria-label="Search available columns" />
+                </div>
+                <div className="border rounded min-h-[120px] sm:min-h-64 max-h-[200px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Available columns" tabIndex={0}>
+                  {draftAvailable.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">No columns match your search.</div>
+                  ) : draftAvailable.map(c => (
+                    <label key={c.id} className={`flex items-center gap-2 p-3 sm:p-2 text-sm hover:bg-gray-50 cursor-pointer ${availableSelected.has(c.id)?'bg-blue-50':''}`}
+                      onClick={() => {
+                        // On mobile, tap to add directly (no need for checkbox)
+                        if (isMobile) {
+                          moveIdsToSelected(new Set([c.id]))
+                        }
+                      }}
+                      onDoubleClick={() => moveIdsToSelected(new Set([c.id]))}
+                      onKeyDown={(e) => { if (e.key==='Enter') moveIdsToSelected(new Set([c.id])) }}
+                      tabIndex={0}
+                    >
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 sm:w-auto sm:h-auto flex-shrink-0" 
+                        checked={availableSelected.has(c.id)} 
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          setAvailableSelected(prev => { 
+                            const next = new Set(prev)
+                            if (next.has(c.id)) next.delete(c.id)
+                            else next.add(c.id)
+                            return next 
+                          })
+                        }} 
+                      />
+                      <span className="truncate flex-1" title={c.label || c.id}>{c.label || c.id}</span>
+                      {isMobile && (
+                        <button 
+                          className="ml-auto px-2 py-1 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-50 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveIdsToSelected(new Set([c.id]))
+                          }}
+                          type="button"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div className="border rounded min-h-[120px] sm:min-h-64 max-h-[200px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Available columns" tabIndex={0}>
-                {draftAvailable.length === 0 ? (
-                  <div className="p-3 text-sm text-gray-500">No columns match your search.</div>
-                ) : draftAvailable.map(c => (
-                  <label key={c.id} className={`flex items-center gap-2 p-3 sm:p-2 text-sm hover:bg-gray-50 cursor-pointer ${availableSelected.has(c.id)?'bg-blue-50':''}`}
-                    onClick={() => moveIdsToSelected(new Set([c.id]))}
-                    onDoubleClick={() => moveIdsToSelected(new Set([c.id]))}
-                    onKeyDown={(e) => { if (e.key==='Enter') moveIdsToSelected(new Set([c.id])) }}
-                    tabIndex={0}
-                  >
-                    <input type="checkbox" className="w-4 h-4 sm:w-auto sm:h-auto" checked={availableSelected.has(c.id)} onChange={() => setAvailableSelected(prev => { const next = new Set(prev); next.has(c.id)?next.delete(c.id):next.add(c.id); return next })} />
-                    <span className="truncate" title={c.label || c.id}>{c.label || c.id}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
 
-            <div className="flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2 py-2 sm:py-0">
-              <button className="flex-1 sm:flex-initial px-4 py-2.5 sm:px-3 sm:py-1 border rounded bg-white disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0" onClick={() => moveIdsToSelected(availableSelected)} disabled={availableSelected.size===0} aria-label="Add to selected">Add →</button>
-              <button className="flex-1 sm:flex-initial px-4 py-2.5 sm:px-3 sm:py-1 border rounded bg-white disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0" onClick={() => moveIdsToAvailable(selectedSelected)} disabled={selectedSelected.size===0} aria-label="Remove from selected">← Remove</button>
-              <div className="flex items-center gap-4 sm:gap-3 text-sm sm:text-xs mt-0 sm:mt-2 w-full sm:w-auto justify-center sm:justify-start">
-                <button className="text-blue-600 underline py-1" onClick={addAll} type="button">Add all</button>
-                <button className="text-blue-600 underline py-1" onClick={removeAll} type="button">Remove all</button>
+              <div className="flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-2 py-2 sm:py-0">
+                <button className="flex-1 sm:flex-initial px-3 py-2 sm:px-3 sm:py-1 border rounded bg-white disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0" onClick={() => moveIdsToSelected(availableSelected)} disabled={availableSelected.size===0} aria-label="Add to selected">Add →</button>
+                <button className="flex-1 sm:flex-initial px-3 py-2 sm:px-3 sm:py-1 border rounded bg-white disabled:opacity-50 text-sm font-medium min-h-[44px] sm:min-h-0" onClick={() => moveIdsToAvailable(selectedSelected)} disabled={selectedSelected.size===0} aria-label="Remove from selected">← Remove</button>
+                <div className="flex items-center gap-3 sm:gap-3 text-xs sm:text-xs mt-0 sm:mt-2 w-full sm:w-auto justify-center sm:justify-start">
+                  <button className="text-blue-600 underline py-1 text-xs" onClick={addAll} type="button">Add all</button>
+                  <button className="text-blue-600 underline py-1 text-xs" onClick={removeAll} type="button">Remove all</button>
+                </div>
               </div>
-            </div>
 
-            <div className="w-full">
-              <div className="mb-2">
-                <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search selected…" value={selQ} onChange={(e) => setSelQ(e.target.value)} aria-label="Search selected columns" />
-              </div>
-              <div className="border rounded min-h-[120px] sm:min-h-64 max-h-[200px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Selected columns" tabIndex={0}>
-                {draftSelected.length === 0 ? (
-                  <div className="p-3 text-sm text-gray-500">Choose columns from the left to build your view.</div>
-                ) : draftSelected.map(c => (
-                  <div key={c.id} className={`group flex items-center gap-2 p-3 sm:p-2 text-sm hover:bg-gray-50 ${c.id==='select'?'opacity-60':''}`}
-                    draggable
-                    onDragStart={() => onSelDragStart(c.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => onSelDrop(c.id)}
-                    onDoubleClick={() => c.id==='select'?null:moveIdsToAvailable(new Set([c.id]))}
-                    tabIndex={0}
-                  >
-                    <span className="text-gray-400 select-none text-lg sm:text-base" title="Drag to reorder" aria-hidden>≡</span>
-                    <input type="checkbox" className="w-4 h-4 sm:w-auto sm:h-auto" disabled={c.id==='select'} checked={selectedSelected.has(c.id)} onChange={() => setSelectedSelected(prev => { const next = new Set(prev); next.has(c.id)?next.delete(c.id):next.add(c.id); return next })} aria-label={`Select ${c.label||c.id}`} />
-                    <span className="truncate flex-1" title={c.label || c.id}>{c.label || c.id}</span>
-                    <div className="flex items-center gap-1.5 sm:gap-1">
-                      <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='left'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'left')} title="Pin Left" type="button">L</button>
-                      <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='none'||!c.pin?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'none')} title="Unpin" type="button">•</button>
-                      <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='right'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'right')} title="Pin Right" type="button">R</button>
+              <div className="w-full">
+                <div className="mb-2">
+                  <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search selected…" value={selQ} onChange={(e) => setSelQ(e.target.value)} aria-label="Search selected columns" />
+                </div>
+                <div className="border rounded min-h-[120px] sm:min-h-64 max-h-[200px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Selected columns" tabIndex={0}>
+                  {draftSelected.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">Choose columns from the left to build your view.</div>
+                  ) : draftSelected.map((c, idx) => (
+                    <div key={c.id} className={`group flex items-center gap-2 p-3 sm:p-2 text-sm hover:bg-gray-50 ${c.id==='select'?'opacity-60':''}`}
+                      draggable={!isMobile}
+                      onDragStart={() => onSelDragStart(c.id)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => onSelDrop(c.id)}
+                      onDoubleClick={() => c.id==='select'?null:moveIdsToAvailable(new Set([c.id]))}
+                      tabIndex={0}
+                    >
+                      {isMobile && c.id !== 'select' && (
+                        <div className="flex flex-col gap-0.5 flex-shrink-0">
+                          <button 
+                            className="text-gray-400 hover:text-gray-600 text-xs px-1"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (idx > 0) {
+                                const prev = draftSelected[idx - 1]
+                                onSelDrop(prev.id)
+                              }
+                            }}
+                            disabled={idx === 0}
+                            type="button"
+                            title="Move up"
+                          >
+                            ↑
+                          </button>
+                          <button 
+                            className="text-gray-400 hover:text-gray-600 text-xs px-1"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (idx < draftSelected.length - 1) {
+                                const next = draftSelected[idx + 1]
+                                onSelDrop(next.id)
+                              }
+                            }}
+                            disabled={idx === draftSelected.length - 1}
+                            type="button"
+                            title="Move down"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      )}
+                      {!isMobile && (
+                        <span className="text-gray-400 select-none text-lg sm:text-base flex-shrink-0" title="Drag to reorder" aria-hidden>≡</span>
+                      )}
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 sm:w-auto sm:h-auto flex-shrink-0" 
+                        disabled={c.id==='select'} 
+                        checked={selectedSelected.has(c.id)} 
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          setSelectedSelected(prev => { 
+                            const next = new Set(prev)
+                            if (next.has(c.id)) next.delete(c.id)
+                            else next.add(c.id)
+                            return next 
+                          })
+                        }} 
+                        aria-label={`Select ${c.label||c.id}`} 
+                      />
+                      <span className="truncate flex-1" title={c.label || c.id}>{c.label || c.id}</span>
+                      {isMobile && c.id !== 'select' && (
+                        <button 
+                          className="ml-auto px-2 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveIdsToAvailable(new Set([c.id]))
+                          }}
+                          type="button"
+                        >
+                          Remove
+                        </button>
+                      )}
+                      {!isMobile && (
+                        <div className="flex items-center gap-1.5 sm:gap-1 flex-shrink-0">
+                          <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='left'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'left')} title="Pin Left" type="button">L</button>
+                          <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='none'||!c.pin?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'none')} title="Unpin" type="button">•</button>
+                          <button className={`px-3 py-1.5 sm:px-2 sm:py-0.5 text-sm sm:text-xs border rounded min-w-[36px] sm:min-w-0 ${c.pin==='right'?'bg-gray-200':''}`} onClick={() => setDraftPin(c.id, 'right')} title="Pin Right" type="button">R</button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+          <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t bg-white">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" className="w-4 h-4" checked={applyInstantly} onChange={(e) => setApplyInstantly(e.target.checked)} />
               <span>Apply changes instantly</span>
@@ -1290,201 +1495,112 @@ export function OrdersPage() {
           <div className="text-center py-8 text-sm text-gray-500">No orders</div>
         ) : (
           paginated.map((o) => {
-            // Get visible columns excluding 'select'
+            // Get visible columns excluding 'select', in the same order as Manage Data
             const mobileColumns = visibleColumns.filter(col => col.id !== 'select')
-            
-            // Group columns by category for better organization
-            const statusFields = mobileColumns.filter(col => ['status', 'inventoryStatus', 'deliveryStatus'].includes(col.id))
-            const etaFields = mobileColumns.filter(col => ['oemEta', 'upfitterEta', 'deliveryEta'].includes(col.id))
-            const vehicleFields = mobileColumns.filter(col => ['series', 'bodyType', 'manufacturer', 'vin', 'cab', 'drivetrain', 'wheelbase', 'gvwr', 'powertrain', 'bodyLength', 'bodyMaterial'].includes(col.id))
-            const pricingFields = mobileColumns.filter(col => ['chassisMsrp', 'bodyPrice', 'optionsPrice', 'labor', 'freight', 'total'].includes(col.id))
-            const buyerFields = mobileColumns.filter(col => ['buyer', 'buyerSegment', 'priority'].includes(col.id))
-            const otherFields = mobileColumns.filter(col => 
-              !['id', 'stockNumber', 'status', 'inventoryStatus', 'deliveryStatus', 'oemEta', 'upfitterEta', 'deliveryEta', 
-                'series', 'bodyType', 'manufacturer', 'vin', 'cab', 'drivetrain', 'wheelbase', 'gvwr', 'powertrain', 'bodyLength', 'bodyMaterial',
-                'chassisMsrp', 'bodyPrice', 'optionsPrice', 'labor', 'freight', 'total', 'buyer', 'buyerSegment', 'priority',
-                'upfitter', 'createdAt', 'dealerWebsite', 'tags', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted', 'createdBy', 'updatedBy'].includes(col.id)
-            )
-            const metadataFields = mobileColumns.filter(col => ['upfitter', 'createdAt', 'dealerWebsite', 'tags', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted', 'createdBy', 'updatedBy'].includes(col.id))
             
             return (
               <Card key={o.id} className="hover:shadow-md transition-shadow border border-gray-200">
-                <CardContent className="p-4">
-                  {/* Header Section */}
-                  <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-100">
+                <CardContent className="p-3">
+                  {/* Header Section - More Compact */}
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
                     <div className="flex-1 min-w-0 pr-2">
-                      <Link to={`/ordermanagement/${o.id}`} className="text-blue-600 hover:text-blue-700 font-semibold text-base truncate block mb-1">
+                      <Link to={`/ordermanagement/${o.id}`} className="text-blue-600 hover:text-blue-700 font-semibold text-sm truncate block">
                         {o.id}
                       </Link>
                       {mobileColumns.some(col => col.id === 'stockNumber') && o.stockNumber && (
-                        <div className="text-xs text-gray-500 font-medium">Stock #: {o.stockNumber}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">#{o.stockNumber}</div>
                       )}
                     </div>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(o.id)}
                       onChange={() => toggleSelected(o.id)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                       aria-label={`Select ${o.id}`}
                     />
                   </div>
                   
-                  {/* Status Section */}
-                  {statusFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {statusFields.map((col) => {
-                          if (col.id === 'status') {
-                            return <div key={col.id}>{statusPill(o.status)}</div>
-                          }
-                          const value = getColumnValue(o, col.id)
-                          if (!value || value === '') return null
-                          return (
-                            <Badge key={col.id} variant="outline" className="text-xs">
-                              {col.label}: {value}
-                            </Badge>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Vehicle Details Section */}
-                  {vehicleFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Vehicle</div>
-                      <div className="space-y-1.5">
-                        {vehicleFields.map((col) => {
-                          if (col.id === 'vin') {
-                            const vinValue = getColumnValue(o, col.id)
-                            if (!vinValue || vinValue === '') return null
-                            return (
-                              <div key={col.id} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600 font-medium">{col.label}:</span>
-                                <span className="font-mono text-xs">{vinValue}</span>
-                              </div>
-                            )
-                          }
-                          const value = getColumnValue(o, col.id)
-                          if (!value || value === '' || value === '-') return null
-                          return (
-                            <div key={col.id} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">{col.label}:</span>
-                              <span className="text-right font-medium">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* ETAs Section - Grouped in grid */}
-                  {etaFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timeline</div>
-                      <div className="grid grid-cols-1 gap-2">
-                        {etaFields.map((col) => (
-                          <div key={col.id} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600 font-medium">{col.label}:</span>
-                            <span className="text-right">{etaText(o[col.id])}</span>
+                  {/* Fields in the same order as Manage Data - More Compact */}
+                  <div className="space-y-1.5">
+                    {mobileColumns.map((col) => {
+                      // Skip id and stockNumber as they're in the header
+                      if (col.id === 'id' || col.id === 'stockNumber') return null
+                      
+                      const value = getColumnValue(o, col.id)
+                      if (!value || value === '' || value === '-') return null
+                      
+                      // Special handling for status fields - compact
+                      if (col.id === 'status') {
+                        return (
+                          <div key={col.id} className="pb-1.5 border-b border-gray-100">
+                            {statusPill(o.status)}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        )
+                      }
+                      
+                      // Group badge-style fields together more compactly
+                      if (['inventoryStatus', 'deliveryStatus', 'buyerSegment', 'priority'].includes(col.id)) {
+                        const badgeValue = getColumnValue(o, col.id)
+                        if (!badgeValue || badgeValue === '') return null
+                        return (
+                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                            <span className="text-gray-600 font-medium">{col.label}:</span>
+                            <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                              {badgeValue}
+                            </Badge>
+                          </div>
+                        )
+                      }
+                      
+                      // Special handling for VIN (monospace font) - compact
+                      if (col.id === 'vin') {
+                        return (
+                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                            <span className="text-gray-600 font-medium">{col.label}:</span>
+                            <span className="font-mono text-xs">{value}</span>
+                          </div>
+                        )
+                      }
+                      
+                      // Group ETA fields in a compact grid
+                      if (['oemEta', 'upfitterEta', 'deliveryEta'].includes(col.id)) {
+                        return (
+                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                            <span className="text-gray-600 font-medium">{col.label}:</span>
+                            <span className="text-right text-xs">{etaText(o[col.id])}</span>
+                          </div>
+                        )
+                      }
+                      
+                      // Special handling for date fields - compact
+                      if (['createdAt', 'actualOemCompleted', 'actualUpfitterCompleted', 'actualDeliveryCompleted'].includes(col.id)) {
+                        return (
+                          <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                            <span className="text-gray-600 font-medium">{col.label}:</span>
+                            <span className="text-right text-xs">{value}</span>
+                          </div>
+                        )
+                      }
+                      
+                      // Default field display - compact
+                      return (
+                        <div key={col.id} className="flex items-center justify-between text-xs pb-1.5 border-b border-gray-100">
+                          <span className="text-gray-600 font-medium truncate pr-2">{col.label}:</span>
+                          <span className="text-right font-medium truncate max-w-[55%] text-xs">{value}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                   
-                  {/* Pricing Section */}
-                  {pricingFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pricing</div>
-                      <div className="space-y-1.5">
-                        {pricingFields.map((col) => {
-                          if (col.id === 'total') {
-                            const totalValue = getColumnValue(o, col.id)
-                            return (
-                              <div key={col.id} className="flex items-center justify-between pt-1">
-                                <span className="text-sm font-semibold text-gray-700">{col.label}:</span>
-                                <span className="text-lg font-bold text-green-600">{totalValue || '$0'}</span>
-                              </div>
-                            )
-                          }
-                          const value = getColumnValue(o, col.id)
-                          if (!value || value === '' || value === '-') return null
-                          return (
-                            <div key={col.id} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">{col.label}:</span>
-                              <span className="text-right font-medium">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Buyer Section */}
-                  {buyerFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Buyer</div>
-                      <div className="space-y-1.5">
-                        {buyerFields.map((col) => {
-                          const value = getColumnValue(o, col.id)
-                          if (!value || value === '' || value === '-') return null
-                          return (
-                            <div key={col.id} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">{col.label}:</span>
-                              <span className="text-right font-medium">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Metadata Section */}
-                  {metadataFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="space-y-1.5">
-                        {metadataFields.map((col) => {
-                          const value = getColumnValue(o, col.id)
-                          if (!value || value === '' || value === '-') return null
-                          return (
-                            <div key={col.id} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">{col.label}:</span>
-                              <span className="text-right font-medium truncate max-w-[60%]">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Other Fields Section */}
-                  {otherFields.length > 0 && (
-                    <div className="mb-3 pb-3 border-b border-gray-100">
-                      <div className="space-y-1.5">
-                        {otherFields.map((col) => {
-                          const value = getColumnValue(o, col.id)
-                          if (!value || value === '' || value === '-') return null
-                          return (
-                            <div key={col.id} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600 font-medium">{col.label}:</span>
-                              <span className="text-right font-medium truncate max-w-[60%]">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Action Footer */}
-                  <div className="flex items-center justify-between pt-2 mt-2">
+                  {/* Action Footer - More Compact */}
+                  <div className="flex items-center justify-between pt-2 mt-1.5">
                     <div className="flex-1">
                       {mobileColumns.some(c => c.id === 'deliveryStatus') && (
                         <div className="text-xs text-gray-500">{getDeliveryStatusLabel(o)}</div>
                       )}
                     </div>
                     <Link to={`/ordermanagement/${o.id}`}>
-                      <Button size="sm" variant="outline" className="text-xs">View Details</Button>
+                      <Button size="sm" variant="outline" className="text-xs h-7 px-2">View</Button>
                     </Link>
                   </div>
                 </CardContent>
@@ -1591,6 +1707,20 @@ export function OrdersPage() {
                   return (
                     <HeaderWithFilter key={col.id} title="Model" isOpen={openFilter==='series'} onOpen={() => setOpenFilter(openFilter==='series'?'': 'series')} {...commonProps} extra={Resizer}>
                       <MultiSelectDropdown options={seriesOptions} selectedValues={columnFilters.series} onApply={(vals) => { setColumnFilters(s => ({ ...s, series: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, series: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'make') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Make" isOpen={openFilter==='make'} onOpen={() => setOpenFilter(openFilter==='make'?'': 'make')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={makeOptions} selectedValues={columnFilters.make} onApply={(vals) => { setColumnFilters(s => ({ ...s, make: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, make: new Set() })); setOpenFilter('') }} />
+                    </HeaderWithFilter>
+                  )
+                }
+                if (col.id === 'year') {
+                  return (
+                    <HeaderWithFilter key={col.id} title="Year" isOpen={openFilter==='year'} onOpen={() => setOpenFilter(openFilter==='year'?'': 'year')} {...commonProps} extra={Resizer}>
+                      <MultiSelectDropdown options={yearOptions} selectedValues={columnFilters.year} onApply={(vals) => { setColumnFilters(s => ({ ...s, year: new Set(vals) })); setOpenFilter('') }} onClear={() => { setColumnFilters(s => ({ ...s, year: new Set() })); setOpenFilter('') }} />
                     </HeaderWithFilter>
                   )
                 }
@@ -1776,12 +1906,12 @@ export function OrdersPage() {
                     </td>
                   )
                     if (key === 'buyer') return (
-                      <td key={`${o.id}_by`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis" title={textOrDash(o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : '')}>
-                        {textOrDash(o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : '')}
+                      <td key={`${o.id}_by`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis" title={textOrDash(o.buyerName || '')}>
+                        {textOrDash(o.buyerName || '')}
                       </td>
                     )
                     // Backward-compat: render Buyer data if persisted column id is still 'dealer'
-                    if (key === 'dealer') return (<td key={`${o.id}_dl`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis" title={o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''}>{o.inventoryStatus === 'SOLD' ? (o.buyerName || '') : ''}</td>)
+                    if (key === 'dealer') return (<td key={`${o.id}_dl`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis" title={o.buyerName || ''}>{o.buyerName || ''}</td>)
                     if (key === 'upfitter') return (
                       <td key={`${o.id}_up`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">
                     <span className="truncate inline-block max-w-full" title={textOrDash(o.buildJson?.upfitter?.name ?? '')}>
@@ -1857,6 +1987,11 @@ export function OrdersPage() {
                     const specs = o.buildJson?.bodySpecs || {}
                     const pricing = o.pricingJson || {}
                     if (key === 'series') return (<td key={`${o.id}_se`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">{textOrDash(ch.series)}</td>)
+                    if (key === 'make') return (<td key={`${o.id}_mk`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">{textOrDash('Ford')}</td>)
+                    if (key === 'year') {
+                      const year = o.createdAt ? new Date(o.createdAt).getFullYear() : new Date().getFullYear()
+                      return (<td key={`${o.id}_yr`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">{textOrDash(year)}</td>)
+                    }
                     if (key === 'cab') return (<td key={`${o.id}_cb`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">{textOrDash(ch.cab)}</td>)
                     if (key === 'drivetrain') return (<td key={`${o.id}_dt`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">{textOrDash(ch.drivetrain)}</td>)
                     if (key === 'wheelbase') return (<td key={`${o.id}_wb`} className="py-3 pr-4 text-center align-middle h-12 whitespace-nowrap overflow-hidden text-ellipsis">{textOrDash(ch.wheelbase)}</td>)
