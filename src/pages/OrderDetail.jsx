@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { advanceOrder, getOrder, publishListing, updateEtas, cancelOrder, setStock, getNotes, addNote, getStatusLabel, setInventoryStatus, ensureDemoOrder } from '@/lib/orderApi'
+import { advanceOrder, getOrder, publishListing, updateEtas, cancelOrder, setStock, getNotes, addNote, getStatusLabel, setInventoryStatus, ensureDemoOrder, generateDealerBuyerName } from '@/lib/orderApi'
 import { calculateMargin } from '@/lib/marginUtils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -760,7 +760,20 @@ export function OrderDetailPage() {
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-medium">Seller</TableCell>
-                    <TableCell>Ford Commercial Vehicle Center</TableCell>
+                    <TableCell>
+                      {(() => {
+                        // If buyer is a dealer (buyerSegment === 'Dealer' or isStock === true), seller is "Ford Commercial Vehicle Center"
+                        // If buyer is a fleet, seller is a dealer name
+                        const isBuyerDealer = order.buyerSegment === 'Dealer' || order.isStock === true
+                        if (isBuyerDealer) {
+                          return 'Ford Commercial Vehicle Center'
+                        } else {
+                          // Generate a deterministic dealer name based on order ID
+                          const orderIdHash = order.id ? order.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0
+                          return generateDealerBuyerName(orderIdHash)
+                        }
+                      })()}
+                    </TableCell>
                     <TableCell>
                       Contact: {contactNames.seller || 'Sarah Johnson'}<br />
                       Email: {contactNames.seller ? `${contactNames.seller.split(' ')[0][0].toLowerCase()}.${contactNames.seller.split(' ')[1].toLowerCase()}@${order.dealerCode?.toLowerCase() || 'dealer'}.com` : `s.johnson@${order.dealerCode?.toLowerCase() || 'dealer'}.com`}<br />
@@ -842,34 +855,138 @@ export function OrderDetailPage() {
               <div className="space-y-4">
                 <div className="relative">
                   <div className="absolute left-3 sm:left-4 top-0 bottom-4 w-0.5 bg-gray-200"></div>
-                  {FLOW.map((status, index) => {
-                    const isCompleted = FLOW.indexOf(order.status) > index
-                    const isCurrent = order.status === status
-                    const event = events.find(e => e.to === status)
-                    const isLast = index === FLOW.length - 1
-                    
-                    // Calculate stage duration
-                    const getStageDuration = () => {
-                      if (!event) return null
-                      const prevEvent = index > 0 ? events.find(e => e.to === FLOW[index - 1]) : null
-                      if (!prevEvent) return null
-                      const start = new Date(prevEvent.at)
-                      const end = new Date(event.at)
-                      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
-                      return days
+                  {(() => {
+                    // Helper function to get raw date for a stage (before chronological ordering)
+                    const getRawStageDate = (status, statusIndex) => {
+                      const event = events.find(e => e.to === status)
+                      
+                      // First priority: use event if available
+                      if (event) return event.at
+                      
+                      // For first stage (CONFIG_RECEIVED), use order.createdAt if no event
+                      if (status === 'CONFIG_RECEIVED' && order.createdAt) return order.createdAt
+                      
+                      const isCompleted = FLOW.indexOf(order.status) > statusIndex
+                      
+                      // For completed stages without events, infer dates from actual completion dates or ETAs
+                      if (isCompleted) {
+                        // Use actual completion dates when available
+                        if (status === 'OEM_IN_TRANSIT' && order.actualOemCompleted) return order.actualOemCompleted
+                        if (status === 'UPFIT_IN_PROGRESS' && order.actualUpfitterCompleted) return order.actualUpfitterCompleted
+                        if (status === 'DELIVERED' && order.actualDeliveryCompleted) return order.actualDeliveryCompleted
+                        
+                        // For stages that lead to actual completion dates, use those dates
+                        if (status === 'AT_UPFITTER' && order.actualOemCompleted) return order.actualOemCompleted
+                        if (status === 'READY_FOR_DELIVERY' && order.actualUpfitterCompleted) return order.actualUpfitterCompleted
+                        
+                        // For other completed stages, try to find previous stage's date and add estimated duration
+                        // Or use ETAs as fallback
+                        if (status === 'OEM_ALLOCATED' || status === 'OEM_PRODUCTION') {
+                          if (order.oemEta) {
+                            // Estimate: OEM stages happen before OEM_IN_TRANSIT
+                            const oemEtaDate = new Date(order.oemEta)
+                            const daysBefore = status === 'OEM_ALLOCATED' ? 3 : 1
+                            oemEtaDate.setDate(oemEtaDate.getDate() - daysBefore)
+                            return oemEtaDate.toISOString()
+                          }
+                        }
+                        
+                        // For AT_UPFITTER, use upfitterEta if available
+                        if (status === 'AT_UPFITTER' && order.upfitterEta) {
+                          return order.upfitterEta
+                        }
+                        
+                        // For UPFIT_IN_PROGRESS, estimate based on upfitterEta
+                        if (status === 'UPFIT_IN_PROGRESS' && order.upfitterEta) {
+                          const upfitEtaDate = new Date(order.upfitterEta)
+                          upfitEtaDate.setDate(upfitEtaDate.getDate() - 1)
+                          return upfitEtaDate.toISOString()
+                        }
+                      }
+                      
+                      return null
                     }
-                    const stageDuration = getStageDuration()
+                    
+                    // Calculate all stage dates in chronological order
+                    // This ensures each stage date is >= the previous stage date
+                    const stageDates = []
+                    for (let i = 0; i < FLOW.length; i++) {
+                      const status = FLOW[i]
+                      let rawDate = getRawStageDate(status, i)
+                      
+                      if (rawDate) {
+                        const date = new Date(rawDate)
+                        
+                        // Ensure this date is >= the previous stage's date
+                        if (i > 0 && stageDates[i - 1]) {
+                          const prevDate = new Date(stageDates[i - 1])
+                          if (date < prevDate) {
+                            // If this date is earlier than previous, set it to 1 day after previous
+                            date.setTime(prevDate.getTime() + 24 * 60 * 60 * 1000)
+                          }
+                        }
+                        
+                        stageDates[i] = date.toISOString()
+                      } else {
+                        stageDates[i] = null
+                      }
+                    }
+                    
+                    // Get current status index for timeline calculations
+                    const currentStatusIndex = FLOW.indexOf(order.status)
+                    
+                    return FLOW.map((status, index) => {
+                      const isCompleted = FLOW.indexOf(order.status) > index
+                      const isCurrent = order.status === status
+                      const isFuture = FLOW.indexOf(order.status) < index
+                      const isLast = index === FLOW.length - 1
+                      const stageDate = stageDates[index]
+                      
+                      // Get event for this status to determine update source
+                      const statusEvent = events.find(e => e.to === status)
+                      const updateSource = statusEvent ? 'Updated by System' : (stageDate ? 'Calculated' : null)
+                      
+                      // Calculate stage duration (time from previous stage to current stage)
+                      // For first stage, duration is 0 (no previous stage)
+                      const getStageDuration = () => {
+                        if (index === 0) return 0 // First stage has 0 duration
+                        if (!stageDate) return null
+                        
+                        const prevDate = stageDates[index - 1]
+                        if (!prevDate) return null
+                        
+                        const start = new Date(prevDate)
+                        const end = new Date(stageDate)
+                        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+                        return Math.max(0, days) // Ensure non-negative
+                      }
+                      const stageDuration = getStageDuration()
                     
                     // Get actual completion date and variance
+                    // This ensures dates update when the order reaches that stage, not after
                     const getActualDate = () => {
-                      if (status === 'OEM_IN_TRANSIT' && order.actualOemCompleted) return order.actualOemCompleted
-                      if (status === 'UPFIT_IN_PROGRESS' && order.actualUpfitterCompleted) return order.actualUpfitterCompleted
-                      if (status === 'DELIVERED' && order.actualDeliveryCompleted) return order.actualDeliveryCompleted
+                      const statusEvent = events.find(e => e.to === status)
+                      const statusIndex = FLOW.indexOf(status)
+                      
+                      // First priority: use event if available
+                      if (statusEvent?.at) return statusEvent.at
+                      
+                      // Second priority: if order status is at this stage or later, use stored date or updatedAt
+                      if (currentStatusIndex >= statusIndex) {
+                        // For specific stages, check stored actual completion dates
+                        if (status === 'AT_UPFITTER' && order.actualOemCompleted) return order.actualOemCompleted
+                        if (status === 'READY_FOR_DELIVERY' && order.actualUpfitterCompleted) return order.actualUpfitterCompleted
+                        if (status === 'DELIVERED' && order.actualDeliveryCompleted) return order.actualDeliveryCompleted
+                        
+                        // For other stages, use updatedAt (when status changed to this stage)
+                        if (order.updatedAt) return order.updatedAt
+                      }
+                      
                       return null
                     }
                     const actualDate = getActualDate()
                     
-                    // Calculate variance (days difference between actual and planned)
+                    // Calculate variance/delay (days difference between actual and planned)
                     const getVariance = () => {
                       if (!actualDate) return null
                       let plannedDate = null
@@ -882,6 +999,42 @@ export function OrderDetailPage() {
                       return days
                     }
                     const variance = getVariance()
+                    
+                    // Get planned ETA for current stage
+                    const getPlannedEta = () => {
+                      if (status === 'OEM_IN_TRANSIT' && order.oemEta) return order.oemEta
+                      if (status === 'UPFIT_IN_PROGRESS' && order.upfitterEta) return order.upfitterEta
+                      if (status === 'READY_FOR_DELIVERY' && order.deliveryEta) return order.deliveryEta
+                      if (status === 'DELIVERED' && order.deliveryEta) return order.deliveryEta
+                      return null
+                    }
+                    const plannedEta = getPlannedEta()
+                    
+                    // For future stages, show minimal info but still show planned ETA if available
+                    if (isFuture) {
+                      return (
+                        <div key={status} className={`relative flex items-start gap-3 sm:gap-4 ${isLast ? '' : 'pb-4 sm:pb-6'}`}>
+                          <div className={`relative z-10 flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 bg-white border-gray-300`}>
+                          </div>
+                          <div className="flex-1 space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-500">
+                                {getStatusLabel(status)}
+                              </span>
+                            </div>
+                            {plannedEta && (
+                              <div className="text-xs text-gray-500">
+                                Planned ETA: {new Date(plannedEta).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    }
+                    
+                    // For completed and current stages, show full details
+                    // Ensure we always have a date to display (use stageDate or fallback)
+                    const displayDate = stageDate || (status === 'CONFIG_RECEIVED' ? order.createdAt : null) || (isCurrent && actualDate ? actualDate : null)
                     
                     return (
                       <div key={status} className={`relative flex items-start gap-3 sm:gap-4 ${isLast ? '' : 'pb-4 sm:pb-6'}`}>
@@ -897,39 +1050,42 @@ export function OrderDetailPage() {
                             </span>
                             {isCurrent && <Badge variant="secondary">Current</Badge>}
                           </div>
-                          {event && (
+                          {displayDate && (
                             <div className="text-sm text-gray-600">
-                              {new Date(event.at).toLocaleString()} – Updated by System
-                            </div>
-                          )}
-                          {actualDate && (
-                            <div className="text-sm text-green-600">
-                              Actual: {new Date(actualDate).toLocaleDateString()}
-                              {variance !== null && (
-                                <span className={`ml-2 ${variance > 0 ? 'text-red-600' : variance < 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                                  ({variance > 0 ? '+' : ''}{variance} days)
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {index === FLOW.indexOf(order.status) && (
-                            <div className="text-xs text-gray-500">
-                              {order.oemEta && status.includes('OEM') && `Planned ETA: ${new Date(order.oemEta).toLocaleDateString()}`}
-                              {order.upfitterEta && status.includes('UPFIT') && `Planned ETA: ${new Date(order.upfitterEta).toLocaleDateString()}`}
-                              {order.deliveryEta && status.includes('DELIVERY') && `Planned ETA: ${new Date(order.deliveryEta).toLocaleDateString()}`}
+                              {new Date(displayDate).toLocaleString('en-US', { 
+                                month: '2-digit', 
+                                day: '2-digit', 
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              })}<br />
+                              <span className="text-xs text-gray-500">Update Source: {updateSource || 'Updated by System'}</span>
                             </div>
                           )}
                           {stageDuration !== null && (
                             <div className="text-xs text-gray-500">
-                              Duration: {stageDuration} days
+                              Duration: {stageDuration} {stageDuration === 1 ? 'day' : 'days'}
+                            </div>
+                          )}
+                          {isCurrent && plannedEta && (
+                            <div className="text-xs text-gray-500">
+                              Planned ETA: {new Date(plannedEta).toLocaleDateString()}
+                            </div>
+                          )}
+                          {variance !== null && (
+                            <div className={`text-xs ${variance > 0 ? 'text-red-600' : variance < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                              Variance: {variance > 0 ? '+' : ''}{variance} {variance === 1 ? 'day' : 'days'}
                             </div>
                           )}
                         </div>
                       </div>
                     )
-                  })}
-        </div>
-      </div>
+                  })
+                  })()}
+                </div>
+              </div>
             </CardContent>
           </Card>
           
@@ -951,66 +1107,219 @@ export function OrderDetailPage() {
                     </TableRow>
                   </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium text-center">OEM In Transit</TableCell>
-                    <TableCell className="text-center">{order.oemEta ? new Date(order.oemEta).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-center">{order.actualOemCompleted ? new Date(order.actualOemCompleted).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-center">
-                      {order.actualOemCompleted && order.createdAt ? (
-                        Math.ceil((new Date(order.actualOemCompleted) - new Date(order.createdAt)) / (1000 * 60 * 60 * 24))
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {order.actualOemCompleted && order.oemEta ? (() => {
-                        const variance = Math.ceil((new Date(order.actualOemCompleted) - new Date(order.oemEta)) / (1000 * 60 * 60 * 24))
-                        return (
-                          <span className={variance > 0 ? 'text-red-600' : variance < 0 ? 'text-green-600' : 'text-gray-600'}>
-                            {variance > 0 ? '+' : ''}{variance} days
-                          </span>
-                        )
-                      })() : '-'}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium text-center">Upfit In Progress</TableCell>
-                    <TableCell className="text-center">{order.upfitterEta ? new Date(order.upfitterEta).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-center">{order.actualUpfitterCompleted ? new Date(order.actualUpfitterCompleted).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-center">
-                      {order.actualUpfitterCompleted && order.actualOemCompleted ? (
-                        Math.ceil((new Date(order.actualUpfitterCompleted) - new Date(order.actualOemCompleted)) / (1000 * 60 * 60 * 24))
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {order.actualUpfitterCompleted && order.upfitterEta ? (() => {
-                        const variance = Math.ceil((new Date(order.actualUpfitterCompleted) - new Date(order.upfitterEta)) / (1000 * 60 * 60 * 24))
-                        return (
-                          <span className={variance > 0 ? 'text-red-600' : variance < 0 ? 'text-green-600' : 'text-gray-600'}>
-                            {variance > 0 ? '+' : ''}{variance} days
-                          </span>
-                        )
-                      })() : '-'}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium text-center">Delivery</TableCell>
-                    <TableCell className="text-center">{order.deliveryEta ? new Date(order.deliveryEta).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-center">{order.actualDeliveryCompleted ? new Date(order.actualDeliveryCompleted).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-center">
-                      {order.actualDeliveryCompleted && order.actualUpfitterCompleted ? (
-                        Math.ceil((new Date(order.actualDeliveryCompleted) - new Date(order.actualUpfitterCompleted)) / (1000 * 60 * 60 * 24))
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {order.actualDeliveryCompleted && order.deliveryEta ? (() => {
-                        const variance = Math.ceil((new Date(order.actualDeliveryCompleted) - new Date(order.deliveryEta)) / (1000 * 60 * 60 * 24))
-                        return (
-                          <span className={variance > 0 ? 'text-red-600' : variance < 0 ? 'text-green-600' : 'text-gray-600'}>
-                            {variance > 0 ? '+' : ''}{variance} days
-                          </span>
-                        )
-                      })() : '-'}
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    // Helper function to get raw date for a stage (same logic as timeline)
+                    const getRawStageDate = (status, statusIndex) => {
+                      const event = events.find(e => e.to === status)
+                      
+                      // First priority: use event if available
+                      if (event) return event.at
+                      
+                      // For first stage (CONFIG_RECEIVED), use order.createdAt if no event
+                      if (status === 'CONFIG_RECEIVED' && order.createdAt) return order.createdAt
+                      
+                      const isCompleted = FLOW.indexOf(order.status) > statusIndex
+                      
+                      // For completed stages without events, infer dates from actual completion dates or ETAs
+                      if (isCompleted) {
+                        // Use actual completion dates when available
+                        if (status === 'OEM_IN_TRANSIT' && order.actualOemCompleted) return order.actualOemCompleted
+                        if (status === 'UPFIT_IN_PROGRESS' && order.actualUpfitterCompleted) return order.actualUpfitterCompleted
+                        if (status === 'DELIVERED' && order.actualDeliveryCompleted) return order.actualDeliveryCompleted
+                        
+                        // For stages that lead to actual completion dates, use those dates
+                        if (status === 'AT_UPFITTER' && order.actualOemCompleted) return order.actualOemCompleted
+                        if (status === 'READY_FOR_DELIVERY' && order.actualUpfitterCompleted) return order.actualUpfitterCompleted
+                        
+                        // For other completed stages, try to find previous stage's date and add estimated duration
+                        // Or use ETAs as fallback
+                        if (status === 'OEM_ALLOCATED' || status === 'OEM_PRODUCTION') {
+                          if (order.oemEta) {
+                            // Estimate: OEM stages happen before OEM_IN_TRANSIT
+                            const oemEtaDate = new Date(order.oemEta)
+                            const daysBefore = status === 'OEM_ALLOCATED' ? 3 : 1
+                            oemEtaDate.setDate(oemEtaDate.getDate() - daysBefore)
+                            return oemEtaDate.toISOString()
+                          }
+                        }
+                        
+                        // For AT_UPFITTER, use upfitterEta if available
+                        if (status === 'AT_UPFITTER' && order.upfitterEta) {
+                          return order.upfitterEta
+                        }
+                        
+                        // For UPFIT_IN_PROGRESS, estimate based on upfitterEta
+                        if (status === 'UPFIT_IN_PROGRESS' && order.upfitterEta) {
+                          const upfitEtaDate = new Date(order.upfitterEta)
+                          upfitEtaDate.setDate(upfitEtaDate.getDate() - 1)
+                          return upfitEtaDate.toISOString()
+                        }
+                      }
+                      
+                      return null
+                    }
+                    
+                    // Calculate all stage dates in chronological order (same logic as timeline)
+                    const stageDates = []
+                    for (let i = 0; i < FLOW.length; i++) {
+                      const status = FLOW[i]
+                      let rawDate = getRawStageDate(status, i)
+                      
+                      if (rawDate) {
+                        const date = new Date(rawDate)
+                        
+                        // Ensure this date is >= the previous stage's date
+                        if (i > 0 && stageDates[i - 1]) {
+                          const prevDate = new Date(stageDates[i - 1])
+                          if (date < prevDate) {
+                            // If this date is earlier than previous, set it to 1 day after previous
+                            date.setTime(prevDate.getTime() + 24 * 60 * 60 * 1000)
+                          }
+                        }
+                        
+                        stageDates[i] = date.toISOString()
+                      } else {
+                        stageDates[i] = null
+                      }
+                    }
+                    
+                    // Helper to get event date for a status (using chronological dates)
+                    const getEventDate = (status) => {
+                      const statusIndex = FLOW.indexOf(status)
+                      return stageDates[statusIndex] || null
+                    }
+                    
+                    // Get actual completion dates from timeline events
+                    // These are populated from the order timeline as they are completed
+                    const configReceivedEvent = events.find(e => e.to === 'CONFIG_RECEIVED') || (order.createdAt ? { at: order.createdAt } : null)
+                    const atUpfitterEvent = events.find(e => e.to === 'AT_UPFITTER')
+                    const readyForDeliveryEvent = events.find(e => e.to === 'READY_FOR_DELIVERY')
+                    const deliveredEvent = events.find(e => e.to === 'DELIVERED')
+                    
+                    // Determine which stages are completed based on order.status
+                    // Use >= to include the current stage (e.g., if at READY_FOR_DELIVERY, upfit is completed)
+                    const atUpfitterIndex = FLOW.indexOf('AT_UPFITTER')
+                    const readyForDeliveryIndex = FLOW.indexOf('READY_FOR_DELIVERY')
+                    const deliveredIndex = FLOW.indexOf('DELIVERED')
+                    const currentStatusIndex = FLOW.indexOf(order.status)
+                    
+                    const isOemCompleted = currentStatusIndex >= atUpfitterIndex
+                    const isUpfitCompleted = currentStatusIndex >= readyForDeliveryIndex
+                    const isDeliveryCompleted = currentStatusIndex >= deliveredIndex
+                    
+                    // Helper to get actual completed date: check event first, then order status/updatedAt
+                    // This ensures dates update when the order reaches that stage, not after
+                    const getActualCompletedDate = (targetStatus, event, fallbackDate) => {
+                      // First priority: use event if available
+                      if (event?.at) return event.at
+                      
+                      // Second priority: if order status is at this stage or later, use updatedAt or fallback
+                      const targetIndex = FLOW.indexOf(targetStatus)
+                      if (currentStatusIndex >= targetIndex) {
+                        // If order has actual completion date stored, use it
+                        if (fallbackDate) return fallbackDate
+                        // Otherwise use updatedAt (when status changed to this stage)
+                        if (order.updatedAt) return order.updatedAt
+                      }
+                      
+                      return null
+                    }
+                    
+                    // 1. OEM Completed: Order Received through At Upfitter
+                    // Planned ETA: Chassis ETA from orders table
+                    // Actual Completed: Date it arrives at the upfitter (AT_UPFITTER event or when status reached AT_UPFITTER)
+                    // Duration: At Upfitter - Order Received
+                    const oemStartDate = configReceivedEvent?.at || order.createdAt // Order Received
+                    const oemEndDate = getActualCompletedDate('AT_UPFITTER', atUpfitterEvent, order.actualOemCompleted)
+                    const oemPlannedEta = order.oemEta // Chassis ETA from orders table
+                    const oemActualCompleted = isOemCompleted && oemEndDate ? oemEndDate : null
+                    const oemDuration = oemStartDate && oemEndDate ? Math.max(0, Math.ceil((new Date(oemEndDate) - new Date(oemStartDate)) / (1000 * 60 * 60 * 24))) : null
+                    const oemVariance = oemPlannedEta && oemActualCompleted ? Math.ceil((new Date(oemActualCompleted) - new Date(oemPlannedEta)) / (1000 * 60 * 60 * 24)) : null
+                    
+                    // 2. Upfit Completed: At Upfitter through Ready for Delivery
+                    // Planned ETA: Upfit ETA from orders table
+                    // Actual Completed: Date it is ready for delivery (READY_FOR_DELIVERY event or when status reached READY_FOR_DELIVERY)
+                    // Duration: Ready for Delivery - At Upfitter
+                    const upfitStartDate = atUpfitterEvent?.at || (isOemCompleted && oemEndDate ? oemEndDate : null) // At Upfitter (from event or calculated)
+                    const upfitEndDate = getActualCompletedDate('READY_FOR_DELIVERY', readyForDeliveryEvent, order.actualUpfitterCompleted)
+                    const upfitPlannedEta = order.upfitterEta // Upfit ETA from orders table
+                    const upfitActualCompleted = isUpfitCompleted && upfitEndDate ? upfitEndDate : null
+                    const upfitDuration = upfitStartDate && upfitEndDate ? Math.max(0, Math.ceil((new Date(upfitEndDate) - new Date(upfitStartDate)) / (1000 * 60 * 60 * 24))) : null
+                    const upfitVariance = upfitPlannedEta && upfitActualCompleted ? Math.ceil((new Date(upfitActualCompleted) - new Date(upfitPlannedEta)) / (1000 * 60 * 60 * 24)) : null
+                    
+                    // 3. Final Delivery: Ready for Delivery through Delivered
+                    // Planned ETA: Final ETA from orders table
+                    // Actual Completed: Delivered date (DELIVERED event or when status reached DELIVERED)
+                    // Duration: Delivered - Ready for Delivery
+                    const deliveryStartDate = readyForDeliveryEvent?.at || (isUpfitCompleted && upfitEndDate ? upfitEndDate : null) // Ready for Delivery (from event or calculated)
+                    const deliveryEndDate = getActualCompletedDate('DELIVERED', deliveredEvent, order.actualDeliveryCompleted)
+                    const deliveryPlannedEta = order.deliveryEta // Final ETA from orders table
+                    const deliveryActualCompleted = isDeliveryCompleted && deliveryEndDate ? deliveryEndDate : null
+                    const deliveryDuration = deliveryStartDate && deliveryEndDate ? Math.max(0, Math.ceil((new Date(deliveryEndDate) - new Date(deliveryStartDate)) / (1000 * 60 * 60 * 24))) : null
+                    const deliveryVariance = deliveryPlannedEta && deliveryActualCompleted ? Math.ceil((new Date(deliveryActualCompleted) - new Date(deliveryPlannedEta)) / (1000 * 60 * 60 * 24)) : null
+                    
+                    return (
+                      <>
+                        <TableRow>
+                          <TableCell className="font-medium text-center">OEM Completed</TableCell>
+                          <TableCell className="text-center">
+                            {oemPlannedEta ? new Date(oemPlannedEta).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {oemActualCompleted ? new Date(oemActualCompleted).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {oemDuration !== null ? oemDuration : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {oemVariance !== null ? (
+                              <span className={oemVariance > 0 ? 'text-red-600' : oemVariance < 0 ? 'text-green-600' : 'text-gray-600'}>
+                                {oemVariance > 0 ? '+' : ''}{oemVariance} days
+                              </span>
+                            ) : '-'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium text-center">Upfit Completed</TableCell>
+                          <TableCell className="text-center">
+                            {upfitPlannedEta ? new Date(upfitPlannedEta).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {upfitActualCompleted ? new Date(upfitActualCompleted).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {upfitDuration !== null ? upfitDuration : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {upfitVariance !== null ? (
+                              <span className={upfitVariance > 0 ? 'text-red-600' : upfitVariance < 0 ? 'text-green-600' : 'text-gray-600'}>
+                                {upfitVariance > 0 ? '+' : ''}{upfitVariance} days
+                              </span>
+                            ) : '-'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium text-center">Final Delivery</TableCell>
+                          <TableCell className="text-center">
+                            {deliveryPlannedEta ? new Date(deliveryPlannedEta).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {deliveryActualCompleted ? new Date(deliveryActualCompleted).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {deliveryDuration !== null ? deliveryDuration : '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {deliveryVariance !== null ? (
+                              <span className={deliveryVariance > 0 ? 'text-red-600' : deliveryVariance < 0 ? 'text-green-600' : 'text-gray-600'}>
+                                {deliveryVariance > 0 ? '+' : ''}{deliveryVariance} days
+                              </span>
+                            ) : '-'}
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    )
+                  })()}
                 </TableBody>
               </Table>
               </div>

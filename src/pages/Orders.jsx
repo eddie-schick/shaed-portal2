@@ -2184,7 +2184,7 @@ function HeaderWithFilter({ title, isOpen, onOpen, children, extra, ...rest }) {
   }, [isOpen])
 
   return (
-    <th className="py-2 pr-4 text-center whitespace-nowrap relative" ref={thRef} {...rest}>
+    <th className="py-2 pr-4 text-center whitespace-nowrap relative sticky top-0 z-10 bg-white" ref={thRef} {...rest}>
       <button
         type="button"
         className="inline-flex items-center gap-1 hover:text-gray-900"

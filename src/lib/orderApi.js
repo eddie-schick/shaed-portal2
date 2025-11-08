@@ -603,9 +603,12 @@ function seedDemoOrders(targetCount = 154) {
       baseOrder.oemEta = enforced.oemEta
       baseOrder.upfitterEta = enforced.upfitterEta
       baseOrder.deliveryEta = enforced.deliveryEta
-      // Set actual completion dates for delivered orders
-      const deliveryDate = new Date(baseOrder.deliveryEta)
-      baseOrder.actualDeliveryCompleted = baseOrder.deliveryEta
+      // Set actual completion dates for delivered orders with variance
+      const deliveryEtaDate = new Date(baseOrder.deliveryEta)
+      const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
+      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+      const deliveryDate = new Date(deliveryEtaDate)
+      baseOrder.actualDeliveryCompleted = deliveryDate.toISOString()
       // Set OEM completion date (before upfitter)
       const oemDate = new Date(deliveryDate)
       oemDate.setDate(oemDate.getDate() - 15) // OEM completed 15 days before delivery
@@ -625,9 +628,12 @@ function seedDemoOrders(targetCount = 154) {
       baseOrder.oemEta = enforced.oemEta
       baseOrder.upfitterEta = enforced.upfitterEta
       baseOrder.deliveryEta = enforced.deliveryEta
-      // Set actual completion dates for delivered orders
-      const deliveryDate = new Date(baseOrder.deliveryEta)
-      baseOrder.actualDeliveryCompleted = baseOrder.deliveryEta
+      // Set actual completion dates for delivered orders with variance
+      const deliveryEtaDate = new Date(baseOrder.deliveryEta)
+      const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
+      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+      const deliveryDate = new Date(deliveryEtaDate)
+      baseOrder.actualDeliveryCompleted = deliveryDate.toISOString()
       // Set OEM completion date (before upfitter)
       const oemDate = new Date(deliveryDate)
       oemDate.setDate(oemDate.getDate() - 15) // OEM completed 15 days before delivery
@@ -659,7 +665,12 @@ function seedDemoOrders(targetCount = 154) {
     
     // Set actual completion dates for any delivered orders that don't have them
     if (baseOrder.status === 'DELIVERED' && !baseOrder.actualDeliveryCompleted) {
-      baseOrder.actualDeliveryCompleted = baseOrder.deliveryEta || new Date().toISOString()
+      // Add variance to actual delivery date: -5 to +10 days from planned ETA
+      const deliveryEtaDate = baseOrder.deliveryEta ? new Date(baseOrder.deliveryEta) : new Date()
+      const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
+      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+      baseOrder.actualDeliveryCompleted = deliveryEtaDate.toISOString()
+      
       // Set OEM and upfitter dates if not already set
       if (!baseOrder.actualOemCompleted) {
         const deliveryDate = new Date(baseOrder.actualDeliveryCompleted)
@@ -811,7 +822,13 @@ function ensureSeedData() {
     const statusIdx = ORDER_FLOW.indexOf(status)
     const actualOemCompleted = (statusIdx >= ORDER_FLOW.indexOf('OEM_IN_TRANSIT')) ? (o.actualOemCompleted || mkDate(-(i % 10 + 5))) : null
     const actualUpfitterCompleted = (statusIdx >= ORDER_FLOW.indexOf('UPFIT_IN_PROGRESS')) ? (o.actualUpfitterCompleted || mkDate(-(i % 8 + 2))) : null
-    const actualDeliveryCompleted = (status === 'DELIVERED') ? (o.actualDeliveryCompleted || mkDate(-(i % 7 + 1))) : null
+    // For delivered orders, add variance to actual delivery date: -5 to +10 days from planned ETA
+    const actualDeliveryCompleted = (status === 'DELIVERED') ? (o.actualDeliveryCompleted || (() => {
+      const deliveryEtaDate = deliveryEta ? new Date(deliveryEta) : mkDate(-(i % 7 + 1))
+      const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
+      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+      return deliveryEtaDate.toISOString()
+    })()) : null
     
     // Generate priority and tags
     const priorities = ['Low', 'Normal', 'High', 'Urgent']
@@ -927,7 +944,13 @@ function ensureSeedData() {
     const statusIdx = ORDER_FLOW.indexOf(status)
     const actualOemCompleted = (statusIdx >= ORDER_FLOW.indexOf('OEM_IN_TRANSIT')) ? mkDate(-(idx % 10 + 5)) : null
     const actualUpfitterCompleted = (statusIdx >= ORDER_FLOW.indexOf('UPFIT_IN_PROGRESS')) ? mkDate(-(idx % 8 + 2)) : null
-    const actualDeliveryCompleted = (status === 'DELIVERED') ? mkDate(-(idx % 7 + 1)) : null
+    // For delivered orders, add variance to actual delivery date: -5 to +10 days from planned ETA
+    const actualDeliveryCompleted = (status === 'DELIVERED') ? (() => {
+      const deliveryEtaDate = deliveryEta ? new Date(deliveryEta) : mkDate(-(idx % 7 + 1))
+      const varianceDays = (idx % 16) - 5 // Range: -5 to +10 days
+      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+      return deliveryEtaDate.toISOString()
+    })() : null
     const priorities = ['Low', 'Normal', 'High', 'Urgent']
     const priority = priorities[idx % priorities.length]
     const allTags = ['Rush', 'Custom', 'Fleet', 'Demo', 'Priority', 'Special', 'Standard', 'Warranty']
@@ -1021,17 +1044,18 @@ function ensureSeedData() {
       seen.add(idCandidate)
       const up = upfittersForTopup[idx % upfittersForTopup.length]
       const status = ORDER_FLOW[Math.min(idx % ORDER_FLOW.length, ORDER_FLOW.length - 1)]
+      const etas = (() => {
+        let oemEta = mkDate(10 + (idx % 15))
+        let upfitterEta = mkDate(20 + (idx % 15))
+        let deliveryEta = (idx % 7 === 3) ? mkDate(3 + (idx % 4)) : mkDate(35 + (idx % 15))
+        return enforceEtaPolicy({ createdAt: mkDate(-(10 + idx)), status, oemEta, upfitterEta, deliveryEta })
+      })()
       const stub = {
         id: idCandidate,
         dealerCode: dealersForTopup[idx % dealersForTopup.length],
         upfitterId: up.id,
         status,
-        ...(() => {
-          let oemEta = mkDate(10 + (idx % 15))
-          let upfitterEta = mkDate(20 + (idx % 15))
-          let deliveryEta = (idx % 7 === 3) ? mkDate(3 + (idx % 4)) : mkDate(35 + (idx % 15))
-          return enforceEtaPolicy({ createdAt: mkDate(-(10 + idx)), status, oemEta, upfitterEta, deliveryEta })
-        })(),
+        ...etas,
         actualOemCompleted: (() => {
           const statusIdx = ORDER_FLOW.indexOf(status)
           return (statusIdx >= ORDER_FLOW.indexOf('OEM_IN_TRANSIT')) ? mkDate(-(idx % 10 + 5)) : null
@@ -1040,7 +1064,13 @@ function ensureSeedData() {
           const statusIdx = ORDER_FLOW.indexOf(status)
           return (statusIdx >= ORDER_FLOW.indexOf('UPFIT_IN_PROGRESS')) ? mkDate(-(idx % 8 + 2)) : null
         })(),
-        actualDeliveryCompleted: (status === 'DELIVERED') ? mkDate(-(idx % 7 + 1)) : null,
+        // For delivered orders, add variance to actual delivery date: -5 to +10 days from planned ETA
+        actualDeliveryCompleted: (status === 'DELIVERED') ? (() => {
+          const deliveryEtaDate = etas.deliveryEta ? new Date(etas.deliveryEta) : mkDate(-(idx % 7 + 1))
+          const varianceDays = (idx % 16) - 5 // Range: -5 to +10 days
+          deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+          return deliveryEtaDate.toISOString()
+        })() : null,
         createdBy: (() => {
           const users = ['Sarah Johnson', 'Mike Chen', 'Taylor Steele', 'Alex Rivera', 'Jordan Smith', 'Casey Williams', 'Morgan Davis']
           return users[idx % users.length]
@@ -1192,7 +1222,11 @@ function sanitizeExisting(rawOrders) {
     let actualDeliveryCompleted = o.actualDeliveryCompleted
     
     if (status === 'DELIVERED' && !actualDeliveryCompleted) {
-      actualDeliveryCompleted = deliveryEta || new Date().toISOString()
+      // Add variance to actual delivery date: -5 to +10 days from planned ETA
+      const deliveryEtaDate = deliveryEta ? new Date(deliveryEta) : new Date()
+      const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
+      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
+      actualDeliveryCompleted = deliveryEtaDate.toISOString()
       // Set OEM and upfitter dates if not already set
       if (!actualOemCompleted) {
         const deliveryDate = new Date(actualDeliveryCompleted)
