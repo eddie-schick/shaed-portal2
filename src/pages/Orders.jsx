@@ -1190,7 +1190,7 @@ export function OrdersPage() {
 
       <Dialog open={customizeOpen} onOpenChange={(v) => { if (!v) { setCustomizeOpen(false); } else { setCustomizeOpen(true) } }}>
         <DialogContent 
-          className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto"
+          className="w-[calc(100%-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-3xl max-h-[calc(100vh-1rem)] overflow-y-auto !top-4 !left-[50%] !translate-x-[-50%] !translate-y-0 sm:!top-[50%] sm:!translate-y-[-50%] p-4 sm:p-6"
           onOpenAutoFocus={(e) => {
             // Prevent auto-focus on mobile devices
             if (isMobile) {
@@ -1205,12 +1205,12 @@ export function OrdersPage() {
               <span className="text-xs text-gray-500">Available ({(draftColumns||[]).filter(c => !c.visible && c.id !== 'select').length}) · Selected ({(draftColumns||[]).filter(c => c.visible).length})</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] gap-4 sm:gap-4">
+          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] gap-3 sm:gap-4">
             <div className="w-full">
               <div className="mb-2">
                 <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search columns…" value={availQ} onChange={(e) => setAvailQ(e.target.value)} aria-label="Search available columns" />
               </div>
-              <div className="border rounded min-h-[200px] sm:min-h-64 max-h-[300px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Available columns" tabIndex={0}>
+              <div className="border rounded min-h-[120px] sm:min-h-64 max-h-[200px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Available columns" tabIndex={0}>
                 {draftAvailable.length === 0 ? (
                   <div className="p-3 text-sm text-gray-500">No columns match your search.</div>
                 ) : draftAvailable.map(c => (
@@ -1240,7 +1240,7 @@ export function OrdersPage() {
               <div className="mb-2">
                 <input className="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Search selected…" value={selQ} onChange={(e) => setSelQ(e.target.value)} aria-label="Search selected columns" />
               </div>
-              <div className="border rounded min-h-[200px] sm:min-h-64 max-h-[300px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Selected columns" tabIndex={0}>
+              <div className="border rounded min-h-[120px] sm:min-h-64 max-h-[200px] sm:max-h-80 overflow-auto" role="listbox" aria-label="Selected columns" tabIndex={0}>
                 {draftSelected.length === 0 ? (
                   <div className="p-3 text-sm text-gray-500">Choose columns from the left to build your view.</div>
                 ) : draftSelected.map(c => (
@@ -1266,7 +1266,7 @@ export function OrdersPage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 pt-4 border-t">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" className="w-4 h-4" checked={applyInstantly} onChange={(e) => setApplyInstantly(e.target.checked)} />
               <span>Apply changes instantly</span>
