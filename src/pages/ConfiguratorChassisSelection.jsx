@@ -38,7 +38,7 @@ function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
   // Using same approach as home page (App.jsx)
   const IMAGE_MAP = {
     'F-350': [
-      '/vehicle-images/F-350 Super Duty Chassis Cab.avif',
+      '/vehicle-images/F-350 Super Duty Chassis Cab 1.avif',
       '/vehicle-images/F-350 Super Duty Chassis Cab 2.avif',
       '/vehicle-images/F-350 Super Duty Chassis Cab 3.avif',
       '/vehicle-images/F-350 Super Duty Chassis Cab 4.avif',
@@ -47,7 +47,7 @@ function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
       '/vehicle-images/F-350 Super Duty Chassis Cab 7.avif',
     ],
     'F-450': [
-      '/vehicle-images/F-450 Super Duty Chassis Cab.webp',
+      '/vehicle-images/F-450 Super Duty Chassis Cab 1.webp',
       '/vehicle-images/F-450 Super Duty Chassis Cab 2.webp',
       '/vehicle-images/F-450 Super Duty Chassis Cab 3.avif',
       '/vehicle-images/F-450 Super Duty Chassis Cab 4.avif',
@@ -56,7 +56,7 @@ function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
       '/vehicle-images/F-450 Super Duty Chassis Cab 7.webp',
     ],
     'F-550': [
-      '/vehicle-images/F-550 Super Duty Chassis Cab.avif',
+      '/vehicle-images/F-550 Super Duty Chassis Cab 1.avif',
       '/vehicle-images/F-550 Super Duty Chassis Cab 2.png',
       '/vehicle-images/F-550 Super Duty Chassis Cab 3.png',
       '/vehicle-images/F-550 Super Duty Chassis Cab 4.avif',
@@ -65,7 +65,7 @@ function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
       '/vehicle-images/F-550 Super Duty Chassis Cab 7.png',
     ],
     'F-600': [
-      '/vehicle-images/F-600 Super Duty Chassis Cab.avif',
+      '/vehicle-images/F-600 Super Duty Chassis Cab 1.avif',
       '/vehicle-images/F-600 Super Duty Chassis Cab 2.avif',
       '/vehicle-images/F-600 Super Duty Chassis Cab 3.avif',
       '/vehicle-images/F-600 Super Duty Chassis Cab 4.webp',
@@ -74,42 +74,101 @@ function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
       '/vehicle-images/F-600 Super Duty Chassis Cab 7.avif',
     ],
     'F-650': [
+      '/vehicle-images/Ford F-650 1.avif',
       '/vehicle-images/F-650 2.avif',
-      '/vehicle-images/Ford F-650.avif',
       '/vehicle-images/Ford F-650 3.avif',
       '/vehicle-images/Ford F-650 4.avif',
       '/vehicle-images/Ford F-650 5.avif',
       '/vehicle-images/Ford F-650 6.avif',
     ],
     'F-750': [
-      '/vehicle-images/Ford F-750.avif',
+      '/vehicle-images/Ford F-750 1.avif',
       '/vehicle-images/Ford F-750 2.avif',
       '/vehicle-images/Ford F-750 3.avif',
       '/vehicle-images/Ford F-750 4.avif',
     ],
     'E-350': [
-      '/vehicle-images/Ford E-350.avif',
+      '/vehicle-images/E-350 1.avif',
+      '/vehicle-images/E-350 2.avif',
     ],
     'E-450': [
-      '/vehicle-images/E-450.avif',
+      '/vehicle-images/E-450 1.png',
       '/vehicle-images/E-450 2.avif',
-      '/vehicle-images/E-450.jpg',
     ],
     'Transit': [
       '/vehicle-images/Ford E-350.avif', // Using E-350 image as placeholder for Transit
     ],
     'E-Transit': [
-      '/vehicle-images/E-450.avif', // Using E-450 image as placeholder for E-Transit
+      '/vehicle-images/E-450 1.png', // Using E-450 image as placeholder for E-Transit
       '/vehicle-images/E-450 2.avif',
-      '/vehicle-images/E-450.jpg',
     ],
   }
-  const candidateSources = IMAGE_MAP[chassis.imageKey] || [
+  // Sort images by number in filename (files without numbers treated as "1", then 1, 2, 3...)
+  const sortImagesByFilename = (sources) => {
+    const extractOrder = (path) => {
+      const filename = path.split('/').pop() || ''
+      // Match number before file extension (e.g., "E-350 1.avif" -> 1, "E-350.avif" -> 1)
+      const match = filename.match(/(?:^|\s)(\d+)(?=\.[^.]+$)/)
+      if (match) {
+        return parseInt(match[1], 10)
+      }
+      // Files without numbers are treated as "1" (base image)
+      return 1
+    }
+    return sources.slice().sort((a, b) => {
+      const aNum = extractOrder(a)
+      const bNum = extractOrder(b)
+      // Sort by number
+      if (aNum !== bNum) return aNum - bNum
+      // If same number, sort alphabetically
+      return a.localeCompare(b)
+    })
+  }
+  // Dedupe images by number - keep only one image per number
+  const dedupeByNumber = (sources) => {
+    const extractNumber = (path) => {
+      const filename = path.split('/').pop() || ''
+      const match = filename.match(/(?:^|\s)(\d+)(?=\.[^.]+$)/)
+      return match ? parseInt(match[1], 10) : 1
+    }
+    const hasExplicitNumber = (path) => {
+      const filename = path.split('/').pop() || ''
+      return /(?:^|\s)(\d+)(?=\.[^.]+$)/.test(filename)
+    }
+    
+    // Group by number
+    const byNumber = new Map()
+    for (const src of sources) {
+      const num = extractNumber(src)
+      if (!byNumber.has(num)) {
+        byNumber.set(num, [])
+      }
+      byNumber.get(num).push(src)
+    }
+    
+    // For each number, keep only one image (prefer explicit numbered files)
+    const result = []
+    for (const [num, files] of Array.from(byNumber.entries()).sort((a, b) => a[0] - b[0])) {
+      // Sort files: explicit numbered files first, then alphabetically
+      files.sort((a, b) => {
+        const aHasNum = hasExplicitNumber(a)
+        const bHasNum = hasExplicitNumber(b)
+        if (aHasNum && !bHasNum) return -1
+        if (!aHasNum && bHasNum) return 1
+        return a.localeCompare(b)
+      })
+      // Keep only the first one (best match)
+      result.push(files[0])
+    }
+    
+    return result
+  }
+  const candidateSources = dedupeByNumber(sortImagesByFilename(IMAGE_MAP[chassis.imageKey] || [
     `/vehicle-images/${chassis.imageKey}.avif`,
     `/vehicle-images/${chassis.imageKey}.png`,
     `/vehicle-images/${chassis.imageKey}.jpg`,
     `/vehicle-images/${chassis.imageKey}.webp`
-  ]
+  ]))
 
   return (
     <div ref={cardRef}>
@@ -135,6 +194,7 @@ function ChassisSelectionCard({ chassis, selected, onSelect, cardRef }) {
               src={candidateSources[imgIdx]}
               alt={`${chassis.name}`}
               className="w-full h-full object-cover rounded"
+              style={imgIdx === 0 && ['F-650', 'F-750', 'E-350', 'E-450'].includes(chassis.imageKey) ? { transform: 'scaleX(-1)' } : {}}
               onError={(e) => {
                 const nextIdx = imgIdx + 1
                 if (nextIdx < candidateSources.length) {

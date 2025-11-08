@@ -1,10 +1,16 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Link } from 'react-router-dom'
+import { calculateMargin } from '@/lib/marginUtils'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ChevronDownIcon } from 'lucide-react'
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Legend, 
@@ -24,16 +30,279 @@ const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#e
 
 const DASHBOARD_OPTIONS = [
   { value: 'executive', label: 'Executive' },
+  { value: 'financial', label: 'Financial' },
   { value: 'operations', label: 'Operations' },
   { value: 'accountability', label: 'Activity' },
   { value: 'delivery', label: 'Delivery' },
   { value: 'buyer', label: 'Buyer' },
   { value: 'sla', label: 'SLA' },
-  { value: 'financial', label: 'Financial' },
 ]
+
+// AR Collections Analysis Component
+function ARCollectionsAnalysis({ orders = [] }) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  
+  // Reset to page 1 when orders change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [orders])
+  
+  // Get outstanding invoices (delivered orders that haven't been paid)
+  const outstandingInvoices = useMemo(() => {
+    return orders
+      .filter(o => {
+        if (!o.actualDeliveryCompleted || !o.pricingJson?.total || o.status !== 'DELIVERED') {
+          return false
+        }
+        const deliveryDate = new Date(o.actualDeliveryCompleted)
+        deliveryDate.setHours(0, 0, 0, 0)
+        const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+        return daysSinceDelivery >= 0 && daysSinceDelivery <= 90
+      })
+      .map(o => {
+        const deliveryDate = new Date(o.actualDeliveryCompleted)
+        deliveryDate.setHours(0, 0, 0, 0)
+        const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+        
+        let agingBucket = '0-30'
+        if (daysSinceDelivery > 90) agingBucket = '90+'
+        else if (daysSinceDelivery > 60) agingBucket = '61-90'
+        else if (daysSinceDelivery > 30) agingBucket = '31-60'
+        
+        return {
+          orderId: o.id,
+          displayId: o.stockNumber || o.id,
+          buyerName: o.buyerName || 'Unknown',
+          buyerSegment: o.buyerSegment || (o.inventoryStatus === 'STOCK' ? 'Dealer' : 'Fleet'),
+          invoiceDate: deliveryDate,
+          daysOutstanding: daysSinceDelivery,
+          agingBucket,
+          amount: o.pricingJson.total,
+          margin: calculateMargin(o.pricingJson, o).margin
+        }
+      })
+      .sort((a, b) => b.daysOutstanding - a.daysOutstanding)
+  }, [orders])
+  
+  if (outstandingInvoices.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500">
+        No outstanding invoices found.
+      </div>
+    )
+  }
+  
+  // Calculate totals by aging bucket
+  const agingData = ['0-30', '31-60', '61-90', '90+'].map(bucket => {
+    const invoices = outstandingInvoices.filter(inv => inv.agingBucket === bucket)
+    const totalAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0)
+    const count = invoices.length
+    return {
+      bucket,
+      count,
+      amount: totalAmount,
+      avgAmount: count > 0 ? totalAmount / count : 0
+    }
+  })
+  
+  const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + inv.amount, 0)
+  const totalCount = outstandingInvoices.length
+  
+  // Pagination calculations
+  const totalPages = Math.ceil(outstandingInvoices.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedInvoices = outstandingInvoices.slice(startIndex, endIndex)
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Outstanding</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold">
+              ${totalOutstanding.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">{totalCount} invoices</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Avg Days Outstanding</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold">
+              {Math.round(outstandingInvoices.reduce((sum, inv) => sum + inv.daysOutstanding, 0) / totalCount)}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">days</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Over 60 Days</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-red-600">
+              ${outstandingInvoices
+                .filter(inv => inv.daysOutstanding > 60)
+                .reduce((sum, inv) => sum + inv.amount, 0)
+                .toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {outstandingInvoices.filter(inv => inv.daysOutstanding > 60).length} invoices
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Aging Bucket Chart */}
+      <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full mb-0">
+        <BarChart data={agingData} margin={{ top: 5, right: 10, left: 10, bottom: 50 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="bucket" 
+            label={{ value: 'Days Outstanding', position: 'insideBottom', offset: -5 }}
+            tick={{ fontSize: 10 }}
+          />
+          <YAxis 
+            yAxisId="amount"
+            label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
+            tickFormatter={(value) => `$${Math.round(value / 1000)}k`}
+            tick={{ fontSize: 10 }}
+          />
+          <YAxis 
+            yAxisId="count"
+            orientation="right"
+            label={{ value: 'Invoice Count', angle: 90, position: 'insideRight' }}
+            tickFormatter={(value) => Math.round(value).toLocaleString()}
+            tick={{ fontSize: 10 }}
+          />
+          <ChartTooltip 
+            formatter={(value, name) => {
+              if (name === 'amount') {
+                return [`$${Math.round(value).toLocaleString()}`, 'Total Amount']
+              }
+              if (name === 'count') {
+                return [Math.round(value).toLocaleString(), 'Invoice Count']
+              }
+              return [Math.round(value), name]
+            }}
+          />
+          <Legend wrapperStyle={{ paddingTop: '20px' }} />
+          <Bar yAxisId="amount" dataKey="amount" fill={COLORS.primary} name="Total Amount" />
+          <Bar yAxisId="count" dataKey="count" fill={COLORS.secondary} name="Invoice Count" />
+        </BarChart>
+      </ChartContainer>
+      
+      {/* Outstanding Invoices Table */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3">Outstanding Invoices Detail</h3>
+        <div className="border rounded-lg overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-center whitespace-nowrap">Order ID</TableHead>
+                <TableHead className="text-center whitespace-nowrap">Buyer</TableHead>
+                <TableHead className="text-center whitespace-nowrap">Segment</TableHead>
+                <TableHead className="text-center whitespace-nowrap">Invoice Date</TableHead>
+                <TableHead className="text-center whitespace-nowrap">Days Outstanding</TableHead>
+                <TableHead className="text-center whitespace-nowrap">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedInvoices.map((inv, idx) => (
+                <TableRow key={`${inv.orderId}-${idx}`}>
+                  <TableCell className="text-center font-medium">
+                    <Link 
+                      to={`/ordermanagement/${inv.orderId}`}
+                      className="text-blue-600 hover:text-blue-700 underline"
+                    >
+                      {inv.displayId}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-center">{inv.buyerName}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={inv.buyerSegment === 'Fleet' ? 'default' : 'secondary'}>
+                      {inv.buyerSegment}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">{inv.invoiceDate.toLocaleDateString()}</TableCell>
+                  <TableCell className="text-center">
+                    <span className={inv.daysOutstanding > 60 ? 'text-red-600 font-semibold' : inv.daysOutstanding > 30 ? 'text-orange-600' : ''}>
+                      {inv.daysOutstanding}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center font-medium">
+                    ${inv.amount.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {totalPages > 1 && (
+            <div className="p-4 border-t">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCurrentPage(prev => Math.max(1, prev - 1))
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setCurrentPage(page)
+                        }}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setCurrentPage(prev => Math.min(totalPages, prev + 1))
+                      }}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              <div className="text-sm text-gray-500 text-center mt-2">
+                Showing {startIndex + 1} to {Math.min(endIndex, outstandingInvoices.length)} of {outstandingInvoices.length} outstanding invoices
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function OrderDashboards({ orders = [] }) {
   const [activeDashboard, setActiveDashboard] = useState('executive')
+  const [topCardsCollapsed, setTopCardsCollapsed] = useState({
+    customers: true,
+    upfitters: true,
+    models: true,
+    bodies: true,
+  })
 
   // Calculate all metrics from orders
   const metrics = useMemo(() => {
@@ -42,53 +311,27 @@ export function OrderDashboards({ orders = [] }) {
         totalOrders: 0,
         deliveredOrders: 0,
         activeOrders: 0,
-        avgLeadTime: 0,
-        onTimeRate: 0,
-        avgMargin: 0,
+        avgGrossProfit: 0,
+        avgGrossMargin: 0,
         revenueBySegment: {},
-        slaCompliance: 0,
+        onTimeRate: 0,
       }
     }
 
-    const now = new Date()
     const delivered = orders.filter(o => o.status === 'DELIVERED')
     const active = orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELED')
     
-    // Calculate lead times
-    const leadTimes = orders
-      .filter(o => o.createdAt && o.actualDeliveryCompleted)
-      .map(o => {
-        const created = new Date(o.createdAt)
-        const completed = new Date(o.actualDeliveryCompleted)
-        return Math.ceil((completed - created) / (1000 * 60 * 60 * 24))
-      })
-    const avgLeadTime = leadTimes.length > 0 
-      ? Math.round(leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length)
-      : 0
-
-    // On-time vs delayed
-    const onTime = orders.filter(o => {
-      if (!o.deliveryEta || !o.actualDeliveryCompleted) return false
-      const planned = new Date(o.deliveryEta)
-      const actual = new Date(o.actualDeliveryCompleted)
-      return actual <= planned
-    }).length
-    const onTimeRate = orders.filter(o => o.deliveryEta && o.actualDeliveryCompleted).length > 0
-      ? Math.round((onTime / orders.filter(o => o.deliveryEta && o.actualDeliveryCompleted).length) * 100)
-      : 0
-
-    // Average margin
-    const margins = orders
+    // Average gross profit and margin using industry-standard calculations
+    const marginData = orders
       .filter(o => o.pricingJson?.total)
-      .map(o => {
-        const total = o.pricingJson.total || 0
-        const cost = (o.pricingJson.chassisMsrp || 0) * 0.85 + 
-                     (o.pricingJson.bodyPrice || 0) * 0.80 + 
-                     (o.pricingJson.labor || 0) * 0.70
-        return total - cost
-      })
-    const avgMargin = margins.length > 0
-      ? Math.round(margins.reduce((a, b) => a + b, 0) / margins.length)
+      .map(o => calculateMargin(o.pricingJson, o))
+    
+    const avgGrossProfit = marginData.length > 0
+      ? Math.round(marginData.reduce((sum, m) => sum + m.margin, 0) / marginData.length)
+      : 0
+    
+    const avgGrossMargin = marginData.length > 0
+      ? Math.round(marginData.reduce((sum, m) => sum + m.marginPercent, 0) / marginData.length)
       : 0
 
     // Revenue by segment
@@ -100,26 +343,41 @@ export function OrderDashboards({ orders = [] }) {
       return acc
     }, {})
 
-    // SLA compliance
-    const slaOrders = orders.filter(o => o.priority && o.deliveryEta && o.actualDeliveryCompleted)
-    const slaMet = slaOrders.filter(o => {
+    // Calculate on-time delivery rate: % of delivered orders with no delays in any stage
+    const deliveredWithEta = delivered.filter(o => o.deliveryEta && o.actualDeliveryCompleted)
+    const onTimeDeliveries = deliveredWithEta.filter(o => {
+      // Check if there are any delays in the chain
+      // OEM delay
+      if (o.oemEta && o.actualOemCompleted) {
+        const oemPlanned = new Date(o.oemEta)
+        const oemActual = new Date(o.actualOemCompleted)
+        if (oemActual > oemPlanned) return false // OEM was delayed
+      }
+      // Upfitter delay
+      if (o.upfitterEta && o.actualUpfitterCompleted) {
+        const upfitterPlanned = new Date(o.upfitterEta)
+        const upfitterActual = new Date(o.actualUpfitterCompleted)
+        if (upfitterActual > upfitterPlanned) return false // Upfitter was delayed
+      }
+      // Delivery delay
       const planned = new Date(o.deliveryEta)
       const actual = new Date(o.actualDeliveryCompleted)
-      return actual <= planned
-    }).length
-    const slaCompliance = slaOrders.length > 0
-      ? Math.round((slaMet / slaOrders.length) * 100)
+      if (actual > planned) return false // Delivery was delayed
+      // On time = no delays in any stage
+      return true
+    })
+    const onTimeRate = deliveredWithEta.length > 0
+      ? Math.round((onTimeDeliveries.length / deliveredWithEta.length) * 100)
       : 0
 
     return {
       totalOrders: orders.length,
       deliveredOrders: delivered.length,
       activeOrders: active.length,
-      avgLeadTime,
-      onTimeRate,
-      avgMargin,
+      avgGrossProfit,
+      avgGrossMargin,
       revenueBySegment,
-      slaCompliance,
+      onTimeRate,
     }
   }, [orders])
 
@@ -134,9 +392,28 @@ export function OrderDashboards({ orders = [] }) {
       return created < thirtyDaysAgo
     })
 
+    const priorDelivered = priorOrders.filter(o => o.status === 'DELIVERED')
+    const priorActive = priorOrders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELED')
+
+    // Calculate prior month average gross profit and margin
+    const priorMarginData = priorOrders
+      .filter(o => o.pricingJson?.total)
+      .map(o => calculateMargin(o.pricingJson, o))
+    
+    const priorAvgGrossProfit = priorMarginData.length > 0
+      ? Math.round(priorMarginData.reduce((sum, m) => sum + m.margin, 0) / priorMarginData.length)
+      : 0
+    
+    const priorAvgGrossMargin = priorMarginData.length > 0
+      ? Math.round(priorMarginData.reduce((sum, m) => sum + m.marginPercent, 0) / priorMarginData.length)
+      : 0
+
     return {
       totalOrders: priorOrders.length,
-      deliveredOrders: priorOrders.filter(o => o.status === 'DELIVERED').length,
+      deliveredOrders: priorDelivered.length,
+      activeOrders: priorActive.length,
+      avgGrossProfit: priorAvgGrossProfit,
+      avgGrossMargin: priorAvgGrossMargin,
     }
   }, [orders])
 
@@ -173,23 +450,23 @@ export function OrderDashboards({ orders = [] }) {
         {/* Desktop: Regular tab list */}
         <TabsList className="hidden sm:grid w-full grid-cols-4 lg:grid-cols-7 gap-1 sm:gap-2">
           <TabsTrigger value="executive" className="text-xs sm:text-sm">Executive</TabsTrigger>
+          <TabsTrigger value="financial" className="text-xs sm:text-sm">Financial</TabsTrigger>
           <TabsTrigger value="operations" className="text-xs sm:text-sm">Operations</TabsTrigger>
           <TabsTrigger value="accountability" className="text-xs sm:text-sm">Activity</TabsTrigger>
           <TabsTrigger value="delivery" className="text-xs sm:text-sm">Delivery</TabsTrigger>
           <TabsTrigger value="buyer" className="text-xs sm:text-sm">Buyer</TabsTrigger>
           <TabsTrigger value="sla" className="text-xs sm:text-sm">SLA</TabsTrigger>
-          <TabsTrigger value="financial" className="text-xs sm:text-sm">Financial</TabsTrigger>
         </TabsList>
 
         {/* 1. Executive Overview Dashboard */}
         <TabsContent value="executive" className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Orders</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.totalOrders}</div>
+                <div className="text-xl sm:text-2xl font-bold">{metrics.totalOrders}</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {variance(metrics.totalOrders, priorMonthMetrics.totalOrders) > 0 ? (
                     <span className="text-green-600">↑ {Math.abs(variance(metrics.totalOrders, priorMonthMetrics.totalOrders))}% vs prior month</span>
@@ -206,7 +483,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Delivered Orders</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.deliveredOrders}</div>
+                <div className="text-xl sm:text-2xl font-bold">{metrics.deliveredOrders}</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {variance(metrics.deliveredOrders, priorMonthMetrics.deliveredOrders) > 0 ? (
                     <span className="text-green-600">↑ {Math.abs(variance(metrics.deliveredOrders, priorMonthMetrics.deliveredOrders))}% vs prior month</span>
@@ -223,23 +500,39 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Active Orders</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.activeOrders}</div>
+                <div className="text-xl sm:text-2xl font-bold">{metrics.activeOrders}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {(() => {
+                    const change = metrics.activeOrders - priorMonthMetrics.activeOrders
+                    if (change > 0) {
+                      return <span className="text-green-600">↑ {Math.abs(change)} vs prior month</span>
+                    } else if (change < 0) {
+                      return <span className="text-red-600">↓ {Math.abs(change)} vs prior month</span>
+                    } else {
+                      return <span>No change</span>
+                    }
+                  })()}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Avg. Lead Time</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">Avg. Gross Profit</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.avgLeadTime} days</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">On-Time Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metrics.onTimeRate}%</div>
+                <div className="text-xl sm:text-2xl font-bold">${Math.round(metrics.avgGrossProfit).toLocaleString()}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {(() => {
+                    const change = metrics.avgGrossProfit - priorMonthMetrics.avgGrossProfit
+                    if (change > 0) {
+                      return <span className="text-green-600">↑ ${Math.abs(change).toLocaleString()} vs prior month</span>
+                    } else if (change < 0) {
+                      return <span className="text-red-600">↓ ${Math.abs(change).toLocaleString()} vs prior month</span>
+                    } else {
+                      return <span>No change</span>
+                    }
+                  })()}
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -247,82 +540,903 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Avg. Gross Margin</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${metrics.avgMargin.toLocaleString()}</div>
+                <div className="text-xl sm:text-2xl font-bold">{Math.round(metrics.avgGrossMargin)}%</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {(() => {
+                    const change = metrics.avgGrossMargin - priorMonthMetrics.avgGrossMargin
+                    if (change > 0) {
+                      return <span className="text-green-600">↑ {Math.abs(change)}% vs prior month</span>
+                    } else if (change < 0) {
+                      return <span className="text-red-600">↓ {Math.abs(change)}% vs prior month</span>
+                    } else {
+                      return <span>No change</span>
+                    }
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+
+          {/* Top Customers */}
+          <Collapsible 
+            open={!topCardsCollapsed.customers} 
+            onOpenChange={(open) => setTopCardsCollapsed(prev => ({ ...prev, customers: !open }))}
+          >
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Top Customers</CardTitle>
+                      <CardDescription>Top customers by total revenue</CardDescription>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${
+                        topCardsCollapsed.customers ? '' : 'rotate-180'
+                      }`}
+                    />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+              {useMemo(() => {
+                const buyerData = orders
+                  .filter(o => o.buyerName)
+                  .reduce((acc, o) => {
+                    const buyer = o.buyerName || 'Unknown'
+                    if (!acc[buyer]) {
+                      acc[buyer] = { buyer, revenue: 0, count: 0, orders: [] }
+                    }
+                    acc[buyer].revenue += (o.pricingJson?.total || 0)
+                    acc[buyer].count++
+                    acc[buyer].orders.push(o)
+                    return acc
+                  }, {})
+                
+                const chartData = Object.values(buyerData)
+                  .map(item => ({ ...item, revenue: Math.round(item.revenue) }))
+                  .sort((a, b) => b.revenue - a.revenue)
+                  .slice(0, 10)
+                
+                return (
+                  <>
+                    <ChartContainer config={{}} className="h-[300px] sm:h-[400px] lg:h-[550px] w-full mb-0">
+                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="buyer" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                          tick={{ fontSize: 9 }}
+                          interval={0}
+                        />
+                        <YAxis 
+                          label={{ value: 'Revenue ($)', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => `$${Math.round(value / 1000)}k`}
+                        />
+                        <ChartTooltip 
+                          formatter={(value) => `$${Math.round(value).toLocaleString()}`}
+                        />
+                        <Bar dataKey="revenue" fill={COLORS.success} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                    <div className="border rounded-lg overflow-x-auto mt-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-center whitespace-nowrap">Customer</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">Order Count</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">Total Revenue</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">View Orders</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {chartData.map((item) => (
+                            <TableRow key={item.buyer}>
+                              <TableCell className="text-center font-medium">{item.buyer}</TableCell>
+                              <TableCell className="text-center">{item.count}</TableCell>
+                              <TableCell className="text-center">${item.revenue.toLocaleString()}</TableCell>
+                              <TableCell className="text-center">
+                                <Link 
+                                  to={`/ordermanagement?tab=orders&q=${encodeURIComponent(item.buyer)}`}
+                                  className="text-blue-600 hover:text-blue-700 underline"
+                                >
+                                  View Orders
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )
+              }, [orders])}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Top Upfitters */}
+          <Collapsible 
+            open={!topCardsCollapsed.upfitters} 
+            onOpenChange={(open) => setTopCardsCollapsed(prev => ({ ...prev, upfitters: !open }))}
+          >
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Top Upfitters</CardTitle>
+                      <CardDescription>Top upfitters by order count</CardDescription>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${
+                        topCardsCollapsed.upfitters ? '' : 'rotate-180'
+                      }`}
+                    />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+              {useMemo(() => {
+                const upfitterData = orders
+                  .filter(o => o.buildJson?.upfitter?.name || o.upfitterId)
+                  .reduce((acc, o) => {
+                    const upfitter = o.buildJson?.upfitter?.name || o.upfitterId || 'Unknown'
+                    if (!acc[upfitter]) {
+                      acc[upfitter] = { upfitter, count: 0, orders: [] }
+                    }
+                    acc[upfitter].count++
+                    acc[upfitter].orders.push(o)
+                    return acc
+                  }, {})
+                
+                const chartData = Object.values(upfitterData)
+                  .sort((a, b) => b.count - a.count)
+                  .slice(0, 10)
+                
+                return (
+                  <>
+                    <ChartContainer config={{}} className="h-[300px] sm:h-[400px] lg:h-[550px] w-full mb-0">
+                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="upfitter" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                          tick={{ fontSize: 9 }}
+                          interval={0}
+                        />
+                        <YAxis 
+                          label={{ value: 'Order Count', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => Math.round(value).toLocaleString()}
+                        />
+                        <ChartTooltip 
+                          formatter={(value) => Math.round(value).toLocaleString()}
+                        />
+                        <Bar dataKey="count" fill={COLORS.warning} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                    <div className="border rounded-lg overflow-x-auto mt-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-center whitespace-nowrap">Upfitter</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">Order Count</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">Total Revenue</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">View Orders</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {chartData.map((item) => {
+                            const totalRevenue = item.orders.reduce((sum, o) => sum + (o.pricingJson?.total || 0), 0)
+                            return (
+                              <TableRow key={item.upfitter}>
+                                <TableCell className="text-center font-medium">{item.upfitter}</TableCell>
+                                <TableCell className="text-center">{item.count}</TableCell>
+                                <TableCell className="text-center">${Math.round(totalRevenue).toLocaleString()}</TableCell>
+                                <TableCell className="text-center">
+                                  <Link 
+                                    to={`/ordermanagement?tab=orders&q=${encodeURIComponent(item.upfitter)}`}
+                                    className="text-blue-600 hover:text-blue-700 underline"
+                                  >
+                                    View Orders
+                                  </Link>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )
+              }, [orders])}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Top Models */}
+          <Collapsible 
+            open={!topCardsCollapsed.models} 
+            onOpenChange={(open) => setTopCardsCollapsed(prev => ({ ...prev, models: !open }))}
+          >
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Top Models</CardTitle>
+                      <CardDescription>Most popular vehicle models by order count</CardDescription>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${
+                        topCardsCollapsed.models ? '' : 'rotate-180'
+                      }`}
+                    />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+              {useMemo(() => {
+                const modelData = orders.reduce((acc, o) => {
+                  const model = o.buildJson?.chassis?.series || 'Unknown'
+                  if (!acc[model]) {
+                    acc[model] = { model, count: 0, orders: [] }
+                  }
+                  acc[model].count++
+                  acc[model].orders.push(o)
+                  return acc
+                }, {})
+                
+                const chartData = Object.values(modelData)
+                  .sort((a, b) => b.count - a.count)
+                  .slice(0, 10)
+                
+                return (
+                  <>
+                    <ChartContainer config={{}} className="h-[300px] sm:h-[400px] lg:h-[550px] w-full mb-0">
+                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 50 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="model" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={50}
+                          tick={{ fontSize: 9 }}
+                          interval={0}
+                        />
+                        <YAxis 
+                          label={{ value: 'Order Count', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => Math.round(value).toLocaleString()}
+                        />
+                        <ChartTooltip 
+                          formatter={(value) => Math.round(value).toLocaleString()}
+                        />
+                        <Bar dataKey="count" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                    <div className="border rounded-lg overflow-x-auto mt-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-center whitespace-nowrap text-base">Model</TableHead>
+                            <TableHead className="text-center whitespace-nowrap text-base">Order Count</TableHead>
+                            <TableHead className="text-center whitespace-nowrap text-base">Total Revenue</TableHead>
+                            <TableHead className="text-center whitespace-nowrap text-base">View Orders</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {chartData.map((item) => {
+                            const totalRevenue = item.orders.reduce((sum, o) => sum + (o.pricingJson?.total || 0), 0)
+                            return (
+                              <TableRow key={item.model}>
+                                <TableCell className="text-center font-medium text-base">{item.model}</TableCell>
+                                <TableCell className="text-center text-base">{item.count}</TableCell>
+                                <TableCell className="text-center text-base">${Math.round(totalRevenue).toLocaleString()}</TableCell>
+                                <TableCell className="text-center text-base">
+                                  <Link 
+                                    to={`/ordermanagement?tab=orders&q=${encodeURIComponent(item.model)}`}
+                                    className="text-blue-600 hover:text-blue-700 underline"
+                                  >
+                                    View Orders
+                                  </Link>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )
+              }, [orders])}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Top Body Types */}
+          <Collapsible 
+            open={!topCardsCollapsed.bodies} 
+            onOpenChange={(open) => setTopCardsCollapsed(prev => ({ ...prev, bodies: !open }))}
+          >
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Top Body Types</CardTitle>
+                      <CardDescription>Most popular body types by order count</CardDescription>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${
+                        topCardsCollapsed.bodies ? '' : 'rotate-180'
+                      }`}
+                    />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+              {useMemo(() => {
+                const bodyData = orders.reduce((acc, o) => {
+                  const bodyType = o.buildJson?.bodyType || 'Chassis Only'
+                  if (!acc[bodyType]) {
+                    acc[bodyType] = { bodyType, count: 0, orders: [] }
+                  }
+                  acc[bodyType].count++
+                  acc[bodyType].orders.push(o)
+                  return acc
+                }, {})
+                
+                const chartData = Object.values(bodyData)
+                  .sort((a, b) => b.count - a.count)
+                  .slice(0, 10)
+                
+                return (
+                  <>
+                    <ChartContainer config={{}} className="h-[300px] sm:h-[400px] lg:h-[550px] w-full mb-0">
+                      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="bodyType" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                          tick={{ fontSize: 9 }}
+                          interval={0}
+                        />
+                        <YAxis 
+                          label={{ value: 'Order Count', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => Math.round(value).toLocaleString()}
+                        />
+                        <ChartTooltip 
+                          formatter={(value) => Math.round(value).toLocaleString()}
+                        />
+                        <Bar dataKey="count" fill={COLORS.secondary} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                    <div className="border rounded-lg overflow-x-auto mt-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-center whitespace-nowrap">Body Type</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">Order Count</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">Total Revenue</TableHead>
+                            <TableHead className="text-center whitespace-nowrap">View Orders</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {chartData.map((item) => {
+                            const totalRevenue = item.orders.reduce((sum, o) => sum + (o.pricingJson?.total || 0), 0)
+                            return (
+                              <TableRow key={item.bodyType}>
+                                <TableCell className="text-center font-medium">{item.bodyType}</TableCell>
+                                <TableCell className="text-center">{item.count}</TableCell>
+                                <TableCell className="text-center">${Math.round(totalRevenue).toLocaleString()}</TableCell>
+                                <TableCell className="text-center">
+                                  <Link 
+                                    to={`/ordermanagement?tab=orders&q=${encodeURIComponent(item.bodyType)}`}
+                                    className="text-blue-600 hover:text-blue-700 underline"
+                                  >
+                                    View Orders
+                                  </Link>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )
+              }, [orders])}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        </TabsContent>
+
+        {/* 2. Financial & Margin Analytics Dashboard */}
+        <TabsContent value="financial" className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  ${useMemo(() => {
+                    return orders
+                      .filter(o => o.pricingJson?.total)
+                      .reduce((sum, o) => sum + (o.pricingJson.total || 0), 0)
+                      .toLocaleString()
+                  }, [orders])}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">SLA Compliance</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">Total Gross Margin</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.slaCompliance}%</div>
+                <div className="text-xl sm:text-2xl font-bold">
+                  ${useMemo(() => {
+                    const totalMargin = orders
+                      .filter(o => o.pricingJson?.total)
+                      .reduce((sum, o) => {
+                        const marginData = calculateMargin(o.pricingJson, o)
+                        return sum + marginData.margin
+                      }, 0)
+                    return totalMargin.toLocaleString()
+                  }, [orders])}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Avg. Margin %</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  {useMemo(() => {
+                    const margins = orders
+                      .filter(o => o.pricingJson?.total)
+                      .map(o => {
+                        const marginData = calculateMargin(o.pricingJson, o)
+                        return marginData.marginPercent
+                      })
+                    return margins.length > 0
+                      ? Math.round(margins.reduce((a, b) => a + b, 0) / margins.length)
+                      : 0
+                  }, [orders])}%
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Avg. Order Value</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  ${useMemo(() => {
+                    const totals = orders
+                      .filter(o => o.pricingJson?.total)
+                      .map(o => o.pricingJson.total)
+                    return totals.length > 0
+                      ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length).toLocaleString()
+                      : 0
+                  }, [orders])}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Orders by Buyer Type</CardTitle>
+              <CardTitle>AR Collections Analysis</CardTitle>
+              <CardDescription>Outstanding invoices aging analysis</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}} className="h-[400px] w-full">
-                  <PieChart>
-                    <Pie
-                      data={Object.entries(metrics.revenueBySegment).map(([name, value]) => ({ name, value }))}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {Object.entries(metrics.revenueBySegment).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip />
-                  </PieChart>
-                </ChartContainer>
+              <ARCollectionsAnalysis orders={orders} />
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Order Volume vs Delivery Volume Over Time</CardTitle>
+              <CardTitle>Margin % by Model</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}} className="h-[400px] w-full">
-                  <AreaChart data={useMemo(() => {
-                    const monthly = orders.reduce((acc, o) => {
-                      if (!o.createdAt) return acc
-                      const month = new Date(o.createdAt).toISOString().slice(0, 7)
-                      if (!acc[month]) acc[month] = { month, orders: 0, deliveries: 0 }
-                      acc[month].orders++
-                      if (o.status === 'DELIVERED' && o.actualDeliveryCompleted) {
-                        const deliveryMonth = new Date(o.actualDeliveryCompleted).toISOString().slice(0, 7)
-                        if (!acc[deliveryMonth]) acc[deliveryMonth] = { month: deliveryMonth, orders: 0, deliveries: 0 }
-                        acc[deliveryMonth].deliveries++
+              <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
+                <BarChart data={useMemo(() => {
+                  const byModel = orders
+                    .filter(o => o.pricingJson?.total && o.buildJson?.chassis?.series)
+                    .reduce((acc, o) => {
+                      const model = o.buildJson.chassis.series
+                      if (!acc[model]) {
+                        acc[model] = { model, margins: [] }
                       }
+                      const marginData = calculateMargin(o.pricingJson, o)
+                      acc[model].margins.push(marginData.marginPercent)
                       return acc
                     }, {})
-                    return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month))
+                  
+                  return Object.values(byModel).map(m => ({
+                    model: m.model,
+                    avgMargin: Math.round(m.margins.reduce((a, b) => a + b, 0) / m.margins.length)
+                  }))
                   }, [orders])}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <ChartTooltip />
-                    <Area type="monotone" dataKey="orders" stackId="1" stroke={COLORS.primary} fill={COLORS.primary} fillOpacity={0.6} />
-                    <Area type="monotone" dataKey="deliveries" stackId="2" stroke={COLORS.success} fill={COLORS.success} fillOpacity={0.6} />
-                  </AreaChart>
+                  <XAxis dataKey="model" angle={-45} textAnchor="end" height={100} />
+                  <YAxis tickFormatter={(value) => `${Math.round(value)}%`} />
+                  <ChartTooltip 
+                    formatter={(value) => `${Math.round(value)}%`}
+                  />
+                  <Bar dataKey="avgMargin" fill={COLORS.primary} />
+                </BarChart>
                 </ChartContainer>
               </CardContent>
             </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Line of Credit Forecasting</CardTitle>
+              <CardDescription>Current balance, available credit, and future projections</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {useMemo(() => {
+                const now = new Date()
+                now.setHours(0, 0, 0, 0)
+                
+                // Calculate current outstanding AR (invoiced but not paid)
+                const outstandingAR = orders
+                  .filter(o => {
+                    if (!o.actualDeliveryCompleted || !o.pricingJson?.total || o.status !== 'DELIVERED') {
+                      return false
+                    }
+                    const deliveryDate = new Date(o.actualDeliveryCompleted)
+                    deliveryDate.setHours(0, 0, 0, 0)
+                    const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+                    return daysSinceDelivery >= 0 && daysSinceDelivery <= 90
+                  })
+                  .reduce((sum, o) => sum + (o.pricingJson.total || 0), 0)
+                
+                // Calculate floor plan inventory (vehicles delivered by OEM but not yet invoiced to customer)
+                // These are vehicles on the floor plan after OEM delivery but before final customer delivery
+                const floorPlanInventory = orders
+                  .filter(o => {
+                    // Vehicle must have been delivered by OEM (actualOemCompleted exists)
+                    // But not yet delivered to customer (status !== 'DELIVERED')
+                    // And not canceled
+                    if (!o.actualOemCompleted || o.status === 'DELIVERED' || o.status === 'CANCELED' || !o.pricingJson?.total) {
+                      return false
+                    }
+                    // Only count vehicles that are past OEM delivery stage
+                    // Statuses: OEM_IN_TRANSIT, AT_UPFITTER, UPFIT_IN_PROGRESS, READY_FOR_DELIVERY
+                    const floorPlanStatuses = ['OEM_IN_TRANSIT', 'AT_UPFITTER', 'UPFIT_IN_PROGRESS', 'READY_FOR_DELIVERY']
+                    return floorPlanStatuses.includes(o.status)
+                  })
+                  .reduce((sum, o) => {
+                    // Use chassis cost (chassisMsrp) as the floor plan amount, or total if chassisMsrp not available
+                    const floorPlanAmount = o.pricingJson.chassisMsrp || o.pricingJson.total || 0
+                    return sum + floorPlanAmount
+                  }, 0)
+                
+                // Current balance = Outstanding AR + Floor Plan Inventory
+                // The dealer carries the cost on floor plan after OEM delivery until final customer delivery/invoicing
+                const currentBalance = outstandingAR + floorPlanInventory
+                
+                // Calculate expected collections (simulate payment collection based on aging)
+                const expectedCollections = orders
+                  .filter(o => {
+                    if (!o.actualDeliveryCompleted || !o.pricingJson?.total || o.status !== 'DELIVERED') {
+                      return false
+                    }
+                    const deliveryDate = new Date(o.actualDeliveryCompleted)
+                    deliveryDate.setHours(0, 0, 0, 0)
+                    const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+                    return daysSinceDelivery >= 0 && daysSinceDelivery <= 90
+                  })
+                  .map(o => {
+                    const deliveryDate = new Date(o.actualDeliveryCompleted)
+                    deliveryDate.setHours(0, 0, 0, 0)
+                    const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+                    // Estimate collection probability based on aging
+                    let collectionProb = 1.0
+                    if (daysSinceDelivery > 60) collectionProb = 0.5
+                    else if (daysSinceDelivery > 30) collectionProb = 0.75
+                    return (o.pricingJson.total || 0) * collectionProb
+                  })
+                  .reduce((sum, val) => sum + val, 0)
+                
+                // Line of Credit parameters (configurable - in real app these would come from settings)
+                const lineOfCreditLimit = 5000000 // $5M line of credit
+                const availableCredit = Math.max(0, lineOfCreditLimit - currentBalance)
+                const utilizationRate = lineOfCreditLimit > 0 ? (currentBalance / lineOfCreditLimit) * 100 : 0
+                
+                // Calculate pending orders that will enter floor plan (not yet at OEM delivery stage)
+                const pendingOrdersForFloorPlan = orders.filter(o => {
+                  if (o.status === 'DELIVERED' || o.status === 'CANCELED' || !o.pricingJson?.total) {
+                    return false
+                  }
+                  // Orders that haven't reached OEM_IN_TRANSIT yet
+                  const earlyStatuses = ['CONFIG_RECEIVED', 'OEM_ALLOCATED', 'OEM_PRODUCTION']
+                  return earlyStatuses.includes(o.status) || !o.actualOemCompleted
+                })
+                
+                const pendingFloorPlanValue = pendingOrdersForFloorPlan.reduce((sum, o) => {
+                  const floorPlanAmount = o.pricingJson.chassisMsrp || o.pricingJson.total || 0
+                  return sum + floorPlanAmount
+                }, 0)
+                
+                // Forecast data for next 6 months
+                const forecastData = []
+                
+                // Calculate monthly purchases (vehicles entering floor plan - OEM deliveries)
+                const monthlyPurchases = orders
+                  .filter(o => o.actualOemCompleted)
+                  .reduce((acc, o) => {
+                    const month = new Date(o.actualOemCompleted).toISOString().slice(0, 7)
+                    const purchaseAmount = o.pricingJson?.chassisMsrp || o.pricingJson?.total || 0
+                    acc[month] = (acc[month] || 0) + purchaseAmount
+                    return acc
+                  }, {})
+                
+                // Calculate monthly collections (payments received)
+                const monthlyCollections = orders
+                  .filter(o => {
+                    if (!o.actualDeliveryCompleted || !o.pricingJson?.total || o.status !== 'DELIVERED') {
+                      return false
+                    }
+                    const deliveryDate = new Date(o.actualDeliveryCompleted)
+                    deliveryDate.setHours(0, 0, 0, 0)
+                    const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+                    return daysSinceDelivery >= 0 && daysSinceDelivery <= 90
+                  })
+                  .reduce((acc, o) => {
+                    const deliveryDate = new Date(o.actualDeliveryCompleted)
+                    const month = deliveryDate.toISOString().slice(0, 7)
+                    const daysSinceDelivery = Math.floor((now - deliveryDate) / (1000 * 60 * 60 * 24))
+                    // Estimate collection probability based on aging
+                    let collectionProb = 1.0
+                    if (daysSinceDelivery > 60) collectionProb = 0.5
+                    else if (daysSinceDelivery > 30) collectionProb = 0.75
+                    const collectionAmount = (o.pricingJson.total || 0) * collectionProb
+                    acc[month] = (acc[month] || 0) + collectionAmount
+                    return acc
+                  }, {})
+                
+                // Get historical monthly values for variation
+                const purchaseValues = Object.values(monthlyPurchases).map(v => Math.round(v))
+                const collectionValues = Object.values(monthlyCollections).map(v => Math.round(v))
+                
+                const avgMonthlyPurchases = purchaseValues.length > 0
+                  ? Math.round(purchaseValues.reduce((a, b) => a + b, 0) / purchaseValues.length)
+                  : 0
+                
+                const avgMonthlyCollections = collectionValues.length > 0
+                  ? Math.round(collectionValues.reduce((a, b) => a + b, 0) / collectionValues.length)
+                  : 0
+                
+                // Calculate standard deviation for variation
+                const purchaseStdDev = purchaseValues.length > 1
+                  ? Math.sqrt(purchaseValues.reduce((sum, val) => sum + Math.pow(val - avgMonthlyPurchases, 2), 0) / purchaseValues.length)
+                  : avgMonthlyPurchases * 0.2 // Default 20% variation
+                
+                const collectionStdDev = collectionValues.length > 1
+                  ? Math.sqrt(collectionValues.reduce((sum, val) => sum + Math.pow(val - avgMonthlyCollections, 2), 0) / collectionValues.length)
+                  : avgMonthlyCollections * 0.2 // Default 20% variation
+                
+                // Track running balance
+                let runningBalance = currentBalance
+                
+                for (let i = 0; i < 6; i++) {
+                  const forecastDate = new Date(now)
+                  forecastDate.setMonth(forecastDate.getMonth() + i)
+                  const monthKey = forecastDate.toISOString().slice(0, 7)
+                  
+                  let projectedPurchases = 0
+                  let projectedCollections = 0
+                  
+                  if (i > 0) {
+                    // Add deterministic variation to purchases and collections each month
+                    // Use historical patterns if available, otherwise use a sine wave pattern
+                    // This creates natural variation where some months are higher/lower
+                    const monthIndex = i - 1
+                    
+                    // Create variation pattern using sine/cosine for smooth fluctuations
+                    // Purchases and collections vary independently
+                    const purchaseWave = Math.sin(monthIndex * Math.PI / 2.5) * 0.25 + 1 // Varies between 0.75 and 1.25
+                    const collectionWave = Math.cos(monthIndex * Math.PI / 3) * 0.3 + 1 // Varies between 0.7 and 1.3
+                    
+                    // Add some additional variation based on month index for more realistic patterns
+                    const purchaseVariation = (monthIndex % 3 === 0 ? 1.15 : monthIndex % 3 === 1 ? 0.9 : 1.05)
+                    const collectionVariation = (monthIndex % 2 === 0 ? 1.1 : 0.95)
+                    
+                    projectedPurchases = Math.max(0, Math.round(avgMonthlyPurchases * purchaseWave * purchaseVariation))
+                    projectedCollections = Math.max(0, Math.round(avgMonthlyCollections * collectionWave * collectionVariation))
+                    
+                    // Each month:
+                    // Purchases increase the balance (new vehicles entering floor plan)
+                    // Collections decrease the balance (payments received)
+                    runningBalance = Math.max(0, runningBalance + projectedPurchases - projectedCollections)
+                  }
+                  
+                  const projectedAvailable = Math.max(0, lineOfCreditLimit - runningBalance)
+                  const projectedUtilization = lineOfCreditLimit > 0 ? Math.round((runningBalance / lineOfCreditLimit) * 100) : 0
+                  
+                  forecastData.push({
+                    month: monthKey,
+                    monthLabel: forecastDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+                    balance: i === 0 ? Math.round(currentBalance) : Math.round(runningBalance),
+                    available: i === 0 ? Math.round(availableCredit) : Math.round(projectedAvailable),
+                    utilization: i === 0 ? Math.round(utilizationRate) : projectedUtilization,
+                    purchases: projectedPurchases,
+                    collections: projectedCollections
+                  })
+                }
+                
+                return (
+                  <div className="space-y-6">
+                    {/* Current Status Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-gray-600">Current Balance</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-xl sm:text-2xl font-bold">
+                            ${currentBalance.toLocaleString()}
           </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {Math.round(utilizationRate)}% utilized
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-gray-600">Available Credit</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className={`text-xl sm:text-2xl font-bold ${availableCredit < lineOfCreditLimit * 0.2 ? 'text-red-600' : availableCredit < lineOfCreditLimit * 0.4 ? 'text-orange-600' : 'text-green-600'}`}>
+                            ${availableCredit.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            of ${lineOfCreditLimit.toLocaleString()} limit
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    {/* Forecast Chart */}
+                    <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
+                      <LineChart data={forecastData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="monthLabel" 
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => `$${Math.round(value / 1000)}k`}
+                        />
+                        <ChartTooltip 
+                          formatter={(value, name) => {
+                            if (name === 'balance') {
+                              return [`$${Math.round(value).toLocaleString()}`, 'Projected Balance']
+                            }
+                            if (name === 'available') {
+                              return [`$${Math.round(value).toLocaleString()}`, 'Available Credit']
+                            }
+                            return [Math.round(value), name]
+                          }}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="balance" 
+                          stroke={COLORS.danger} 
+                          strokeWidth={2}
+                          name="Projected Balance"
+                          dot={{ r: 4 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="available" 
+                          stroke={COLORS.success} 
+                          strokeWidth={2}
+                          name="Available Credit"
+                          dot={{ r: 4 }}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                    
+                    {/* Utilization Chart */}
+                    <ChartContainer config={{}} className="h-[300px] w-full">
+                      <BarChart data={forecastData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="monthLabel" 
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => `${Math.round(value)}%`}
+                          domain={[0, 100]}
+                        />
+                        <ChartTooltip 
+                          formatter={(value) => `${Math.round(value)}%`}
+                        />
+                        <Bar dataKey="utilization" fill={COLORS.primary} name="Utilization %">
+                          {forecastData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.utilization > 80 ? COLORS.danger : entry.utilization > 60 ? COLORS.warning : COLORS.primary} 
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
+                    
+                    {/* Forecast Table */}
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3">6-Month Forecast</h3>
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-center">Month</TableHead>
+                              <TableHead className="text-center">Projected Balance</TableHead>
+                              <TableHead className="text-center">Available Credit</TableHead>
+                              <TableHead className="text-center">Utilization</TableHead>
+                              <TableHead className="text-center">Purchases</TableHead>
+                              <TableHead className="text-center">Collections</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {forecastData.map((row, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="text-center font-medium">{row.monthLabel}</TableCell>
+                                <TableCell className="text-center font-semibold">
+                                  ${Math.round(row.balance).toLocaleString()}
+                                </TableCell>
+                                <TableCell className={`text-center ${row.available < lineOfCreditLimit * 0.2 ? 'text-red-600 font-semibold' : ''}`}>
+                                  ${Math.round(row.available).toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className={row.utilization > 80 ? 'text-red-600 font-semibold' : row.utilization > 60 ? 'text-orange-600' : ''}>
+                                    {Math.round(row.utilization)}%
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center text-gray-600">
+                                  {idx === 0 ? '-' : `+$${Math.round(row.purchases).toLocaleString()}`}
+                                </TableCell>
+                                <TableCell className="text-center text-gray-600">
+                                  {idx === 0 ? '-' : `-$${Math.round(row.collections).toLocaleString()}`}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }, [orders])}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* 2. Operations Timeline Dashboard */}
+        {/* 3. Operations Timeline Dashboard */}
         <TabsContent value="operations" className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
@@ -330,7 +1444,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Avg. OEM Transit Days</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     const durations = orders
                       .filter(o => o.createdAt && o.actualOemCompleted)
@@ -351,7 +1465,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Avg. Upfit Days</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     const durations = orders
                       .filter(o => o.actualOemCompleted && o.actualUpfitterCompleted)
@@ -372,7 +1486,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Avg. Delivery Days</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     const durations = orders
                       .filter(o => o.actualUpfitterCompleted && o.actualDeliveryCompleted)
@@ -393,7 +1507,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Total Delay Days</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     return orders
                       .filter(o => o.deliveryEta && o.actualDeliveryCompleted)
@@ -414,7 +1528,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>Average Days at Upfitter</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}} className="h-[400px] w-full">
+              <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
                 <BarChart data={useMemo(() => {
                   const byUpfitter = orders.reduce((acc, o) => {
                     const upfitter = o.buildJson?.upfitter?.name || 'Unknown'
@@ -439,8 +1553,10 @@ export function OrderDashboards({ orders = [] }) {
                 }, [orders])}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="upfitter" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
-                  <ChartTooltip />
+                  <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                  <ChartTooltip 
+                    formatter={(value) => `${Math.round(value)} days`}
+                  />
                   <Bar dataKey="avgDays" fill={COLORS.warning} name="Average Days" />
                 </BarChart>
               </ChartContainer>
@@ -473,8 +1589,10 @@ export function OrderDashboards({ orders = [] }) {
                 }, [orders])}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip />
+                  <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                  <ChartTooltip 
+                    formatter={(value) => `${Math.round(value)} days`}
+                  />
                   <Line type="monotone" dataKey="avgLeadTime" stroke={COLORS.primary} strokeWidth={2} />
                 </LineChart>
               </ChartContainer>
@@ -482,7 +1600,7 @@ export function OrderDashboards({ orders = [] }) {
           </Card>
         </TabsContent>
 
-        {/* 3. User Activity Dashboard */}
+        {/* 4. User Activity Dashboard */}
         <TabsContent value="accountability" className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
@@ -490,7 +1608,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Orders Created by User</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     const byUser = orders.reduce((acc, o) => {
                       const user = o.createdBy || 'Unknown'
@@ -507,7 +1625,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Orders Updated per Week</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     const weekAgo = new Date()
                     weekAgo.setDate(weekAgo.getDate() - 7)
@@ -598,7 +1716,7 @@ export function OrderDashboards({ orders = [] }) {
                 }
                 
                 return (
-                  <ChartContainer config={{}} className="h-[400px] w-full">
+                  <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis 
@@ -608,8 +1726,10 @@ export function OrderDashboards({ orders = [] }) {
                         height={100}
                         interval={0}
                       />
-                      <YAxis />
-                      <ChartTooltip />
+                      <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                      <ChartTooltip 
+                        formatter={(value) => `${Math.round(value)} days`}
+                      />
                       <Bar dataKey="avgDays" fill={COLORS.primary} />
                     </BarChart>
                   </ChartContainer>
@@ -619,7 +1739,7 @@ export function OrderDashboards({ orders = [] }) {
           </Card>
         </TabsContent>
 
-        {/* 4. Delivery Performance Dashboard */}
+        {/* 5. Delivery Performance Dashboard */}
         <TabsContent value="delivery" className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
@@ -627,14 +1747,30 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Planned vs Actual Variance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     const variances = orders
                       .filter(o => o.deliveryEta && o.actualDeliveryCompleted)
                       .map(o => {
                         const planned = new Date(o.deliveryEta)
                         const actual = new Date(o.actualDeliveryCompleted)
-                        return Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                        // Direct delay at delivery
+                        const directDelay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                        // Calculate cascading delays from earlier stages
+                        let oemDelay = 0
+                        let upfitterDelay = 0
+                        if (o.oemEta && o.actualOemCompleted) {
+                          const oemPlanned = new Date(o.oemEta)
+                          const oemActual = new Date(o.actualOemCompleted)
+                          oemDelay = Math.max(0, Math.ceil((oemActual - oemPlanned) / (1000 * 60 * 60 * 24)))
+                        }
+                        if (o.upfitterEta && o.actualUpfitterCompleted) {
+                          const upfitterPlanned = new Date(o.upfitterEta)
+                          const upfitterActual = new Date(o.actualUpfitterCompleted)
+                          upfitterDelay = Math.max(0, Math.ceil((upfitterActual - upfitterPlanned) / (1000 * 60 * 60 * 24)))
+                        }
+                        // Cumulative variance includes cascading delays
+                        return directDelay + oemDelay + upfitterDelay
                       })
                     return variances.length > 0
                       ? Math.round(variances.reduce((a, b) => a + b, 0) / variances.length)
@@ -648,7 +1784,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">% Delivered On Time</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics.onTimeRate}%</div>
+                <div className="text-xl sm:text-2xl font-bold">{metrics.onTimeRate}%</div>
               </CardContent>
             </Card>
             <Card>
@@ -656,13 +1792,29 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Orders Ahead Schedule</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     return orders.filter(o => {
+                      // Order is ahead only if delivery was early AND there were no delays in earlier stages
                       if (!o.deliveryEta || !o.actualDeliveryCompleted) return false
+                      
+                      // Check for delays in earlier stages
+                      if (o.oemEta && o.actualOemCompleted) {
+                        const planned = new Date(o.oemEta)
+                        const actual = new Date(o.actualOemCompleted)
+                        if (actual > planned) return false // OEM was delayed, can't be ahead
+                      }
+                      
+                      if (o.upfitterEta && o.actualUpfitterCompleted) {
+                        const planned = new Date(o.upfitterEta)
+                        const actual = new Date(o.actualUpfitterCompleted)
+                        if (actual > planned) return false // Upfitter was delayed, can't be ahead
+                      }
+                      
+                      // Check if delivery was early
                       const planned = new Date(o.deliveryEta)
                       const actual = new Date(o.actualDeliveryCompleted)
-                      return actual < planned
+                      return actual < planned // Delivery was early and no earlier delays
                     }).length
                   }, [orders])}
                 </div>
@@ -673,13 +1825,49 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle className="text-sm font-medium text-gray-600">Orders Behind Schedule</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-xl sm:text-2xl font-bold">
                   {useMemo(() => {
                     return orders.filter(o => {
-                      if (!o.deliveryEta || !o.actualDeliveryCompleted) return false
-                      const planned = new Date(o.deliveryEta)
-                      const actual = new Date(o.actualDeliveryCompleted)
-                      return actual > planned
+                      // Check if order has any delays in the chain
+                      let hasDelay = false
+                      
+                      // Check OEM delay
+                      if (o.oemEta && o.actualOemCompleted) {
+                        const planned = new Date(o.oemEta)
+                        const actual = new Date(o.actualOemCompleted)
+                        if (actual > planned) hasDelay = true
+                      }
+                      
+                      // Check Upfitter delay
+                      if (o.upfitterEta && o.actualUpfitterCompleted) {
+                        const planned = new Date(o.upfitterEta)
+                        const actual = new Date(o.actualUpfitterCompleted)
+                        if (actual > planned) hasDelay = true
+                      }
+                      
+                      // Check Delivery delay (including cascading delays)
+                      if (o.deliveryEta && o.actualDeliveryCompleted) {
+                        const planned = new Date(o.deliveryEta)
+                        const actual = new Date(o.actualDeliveryCompleted)
+                        const directDelay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                        // Calculate cascading delays
+                        let oemDelay = 0
+                        let upfitterDelay = 0
+                        if (o.oemEta && o.actualOemCompleted) {
+                          const oemPlanned = new Date(o.oemEta)
+                          const oemActual = new Date(o.actualOemCompleted)
+                          oemDelay = Math.max(0, Math.ceil((oemActual - oemPlanned) / (1000 * 60 * 60 * 24)))
+                        }
+                        if (o.upfitterEta && o.actualUpfitterCompleted) {
+                          const upfitterPlanned = new Date(o.upfitterEta)
+                          const upfitterActual = new Date(o.actualUpfitterCompleted)
+                          upfitterDelay = Math.max(0, Math.ceil((upfitterActual - upfitterPlanned) / (1000 * 60 * 60 * 24)))
+                        }
+                        // Order is behind if there's any delay in the chain
+                        if (directDelay > 0 || oemDelay > 0 || upfitterDelay > 0) hasDelay = true
+                      }
+                      
+                      return hasDelay
                     }).length
                   }, [orders])}
                 </div>
@@ -689,80 +1877,138 @@ export function OrderDashboards({ orders = [] }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Final ETA vs Actual Completion (Delay Visualization)</CardTitle>
+              <CardTitle>Average Delay by Stage</CardTitle>
+              <CardDescription>Average delay days for each delivery stage</CardDescription>
             </CardHeader>
             <CardContent>
               {useMemo(() => {
-                const chartData = orders
-                  .filter(o => o.deliveryEta && o.actualDeliveryCompleted)
-                  .map(o => {
-                    const planned = new Date(o.deliveryEta).getTime()
-                    const actual = new Date(o.actualDeliveryCompleted).getTime()
-                    const delay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
-                    return {
-                      planned: planned,
-                      actual: actual,
-                      delay: delay,
-                      orderId: o.id,
-                      fill: delay > 0 ? COLORS.danger : delay < 0 ? COLORS.success : COLORS.primary
-                    }
-                  })
+                // Calculate delays for each stage
+                const stageData = {
+                  OEM: { delays: [], label: 'OEM Delay' },
+                  Upfitter: { delays: [], label: 'Upfitter Delay' },
+                  Delivery: { delays: [], label: 'Total Delay' }
+                }
                 
-                if (chartData.length === 0) {
+                orders.forEach(o => {
+                  let oemDelay = 0
+                  let upfitterDelay = 0
+                  
+                  // OEM stage delay
+                  if (o.oemEta && o.actualOemCompleted) {
+                    const planned = new Date(o.oemEta)
+                    const actual = new Date(o.actualOemCompleted)
+                    oemDelay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                    stageData.OEM.delays.push(oemDelay)
+                  }
+                  
+                  // Upfitter stage delay
+                  if (o.upfitterEta && o.actualUpfitterCompleted) {
+                    const planned = new Date(o.upfitterEta)
+                    const actual = new Date(o.actualUpfitterCompleted)
+                    upfitterDelay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                    stageData.Upfitter.delays.push(upfitterDelay)
+                  }
+                  
+                  // Delivery stage delay - includes cascading delays from earlier stages
+                  if (o.deliveryEta && o.actualDeliveryCompleted) {
+                    const planned = new Date(o.deliveryEta)
+                    const actual = new Date(o.actualDeliveryCompleted)
+                    // Direct delay at delivery stage
+                    const directDelay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                    // Cumulative delay: direct delay + any delays from earlier stages
+                    // If OEM or Upfitter were delayed, that affects the final delivery
+                    const cumulativeDelay = directDelay + Math.max(0, oemDelay) + Math.max(0, upfitterDelay)
+                    stageData.Delivery.delays.push(cumulativeDelay)
+                  }
+                })
+                
+                const chartData = Object.entries(stageData).map(([stage, data]) => {
+                  const avgDelay = data.delays.length > 0
+                    ? data.delays.reduce((sum, d) => sum + d, 0) / data.delays.length
+                    : 0
+                  const count = data.delays.length
+                  const lateCount = data.delays.filter(d => d > 0).length
+                  const earlyCount = data.delays.filter(d => d < 0).length
+                  const onTimeCount = data.delays.filter(d => d === 0).length
+                  
+                    return {
+                    stage: data.label,
+                    avgDelay: Math.round(avgDelay),
+                    count,
+                    lateCount,
+                    earlyCount,
+                    onTimeCount,
+                    fill: avgDelay > 0 ? COLORS.danger : avgDelay < 0 ? COLORS.success : COLORS.primary
+                  }
+                })
+                
+                if (chartData.every(d => d.count === 0)) {
                   return (
                     <div className="flex items-center justify-center h-64 text-gray-500">
-                      No data available. Orders need to have both deliveryEta and actualDeliveryCompleted dates.
+                      No data available. Orders need to have ETA and actual completion dates for stages.
                     </div>
                   )
                 }
                 
-                // Calculate date range from data
-                const allPlanned = chartData.map(d => d.planned)
-                const allActual = chartData.map(d => d.actual)
-                const minPlanned = Math.min(...allPlanned)
-                const maxPlanned = Math.max(...allPlanned)
-                const minActual = Math.min(...allActual)
-                const maxActual = Math.max(...allActual)
-                
-                // Use the overall min/max for both axes to keep them aligned
-                const minDate = Math.min(minPlanned, minActual)
-                const maxDate = Math.max(maxPlanned, maxActual)
-                
-                // Add padding (5% on each side)
-                const dateRange = maxDate - minDate
-                const padding = dateRange * 0.05
-                const domainMin = minDate - padding
-                const domainMax = maxDate + padding
-                
                 return (
-                  <ChartContainer config={{}} className="h-[400px] w-full !aspect-auto">
-                    <ScatterChart data={chartData}>
+                  <div className="space-y-4">
+                    <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
+                      <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        type="number" 
-                        dataKey="planned" 
-                        name="Planned"
-                        domain={[domainMin, domainMax]}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                      />
+                        <XAxis dataKey="stage" />
                       <YAxis 
-                        type="number" 
-                        dataKey="actual" 
-                        name="Actual"
-                        domain={[domainMin, domainMax]}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                          label={{ value: 'Average Delay (days)', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => `${value > 0 ? '+' : ''}${Math.round(value)}`}
                       />
                       <ChartTooltip 
-                        formatter={(value, name) => {
-                          if (name === 'delay') {
-                            return [`${value} days`, 'Delay'];
-                          }
-                          return [new Date(value).toLocaleDateString(), name];
-                        }}
-                      />
-                      <Scatter dataKey="actual" fill={COLORS.primary} />
-                    </ScatterChart>
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload
+                              return (
+                                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                  <p className="font-semibold mb-2">{data.stage}</p>
+                                  <p className="text-sm mb-1">
+                                    <span className="font-medium">Avg Delay: </span>
+                                    <span className={data.avgDelay > 0 ? 'text-red-600' : data.avgDelay < 0 ? 'text-green-600' : 'text-blue-600'}>
+                                      {data.avgDelay > 0 ? '+' : ''}{Math.round(data.avgDelay)} days
+                                    </span>
+                                  </p>
+                                  <p className="text-sm mb-1">
+                                    <span className="font-medium">Total Orders: </span>
+                                    {data.count}
+                                  </p>
+                                  <div className="text-xs mt-2 pt-2 border-t space-y-1">
+                                    <p><span className="text-red-600">●</span> Late: {data.lateCount}</p>
+                                    <p><span className="text-blue-600">●</span> On Time: {data.onTimeCount}</p>
+                                    <p><span className="text-green-600">●</span> Early: {data.earlyCount}</p>
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        <Bar dataKey="avgDelay" radius={[4, 4, 0, 0]}>
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
                   </ChartContainer>
+                    
+                    {/* Summary stats */}
+                    <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                      {chartData.map((data) => (
+                        <div key={data.stage} className="text-center">
+                          <div className="text-sm font-medium text-gray-600 mb-1">{data.stage}</div>
+                          <div className={`text-2xl font-bold ${data.avgDelay > 0 ? 'text-red-600' : data.avgDelay < 0 ? 'text-green-600' : 'text-blue-600'}`}>
+                            {data.avgDelay > 0 ? '+' : ''}{Math.round(data.avgDelay)}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">days avg</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )
               }, [orders])}
             </CardContent>
@@ -770,44 +2016,90 @@ export function OrderDashboards({ orders = [] }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>On-time vs Late vs Early by Upfitter</CardTitle>
+              <CardTitle>Stage Performance Breakdown</CardTitle>
+              <CardDescription>Early, on-time, and late performance by stage</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}} className="h-[400px] w-full">
-                <BarChart data={useMemo(() => {
-                  const byUpfitter = orders
-                    .filter(o => o.deliveryEta && o.actualDeliveryCompleted && o.buildJson?.upfitter?.name)
-                    .reduce((acc, o) => {
-                      const upfitter = o.buildJson.upfitter.name
-                      if (!acc[upfitter]) {
-                        acc[upfitter] = { upfitter, onTime: 0, late: 0, early: 0 }
-                      }
+              {useMemo(() => {
+                // Calculate performance breakdown for each stage
+                const stageData = {
+                  OEM: { early: 0, onTime: 0, late: 0, label: 'OEM Delay' },
+                  Upfitter: { early: 0, onTime: 0, late: 0, label: 'Upfitter Delay' },
+                  Delivery: { early: 0, onTime: 0, late: 0, label: 'Total Delay' }
+                }
+                
+                orders.forEach(o => {
+                  // OEM stage
+                  if (o.oemEta && o.actualOemCompleted) {
+                    const planned = new Date(o.oemEta)
+                    const actual = new Date(o.actualOemCompleted)
+                    const delay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                    if (delay < 0) stageData.OEM.early++
+                    else if (delay === 0) stageData.OEM.onTime++
+                    else stageData.OEM.late++
+                  }
+                  
+                  // Upfitter stage
+                  if (o.upfitterEta && o.actualUpfitterCompleted) {
+                    const planned = new Date(o.upfitterEta)
+                    const actual = new Date(o.actualUpfitterCompleted)
+                    const delay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
+                    if (delay < 0) stageData.Upfitter.early++
+                    else if (delay === 0) stageData.Upfitter.onTime++
+                    else stageData.Upfitter.late++
+                  }
+                  
+                  // Delivery stage
+                  if (o.deliveryEta && o.actualDeliveryCompleted) {
                       const planned = new Date(o.deliveryEta)
                       const actual = new Date(o.actualDeliveryCompleted)
                       const delay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
-                      if (delay === 0) acc[upfitter].onTime++
-                      else if (delay > 0) acc[upfitter].late++
-                      else acc[upfitter].early++
-                      return acc
-                    }, {})
-                  
-                  return Object.values(byUpfitter)
-                }, [orders])}>
+                    if (delay < 0) stageData.Delivery.early++
+                    else if (delay === 0) stageData.Delivery.onTime++
+                    else stageData.Delivery.late++
+                  }
+                })
+                
+                const chartData = Object.entries(stageData).map(([key, data]) => ({
+                  stage: data.label,
+                  Early: data.early,
+                  'On Time': data.onTime,
+                  Late: data.late
+                }))
+                
+                if (chartData.every(d => d.Early + d['On Time'] + d.Late === 0)) {
+                  return (
+                    <div className="flex items-center justify-center h-64 text-gray-500">
+                      No data available. Orders need to have ETA and actual completion dates for stages.
+                    </div>
+                  )
+                }
+                
+                return (
+                  <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
+                    <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="upfitter" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
-                  <ChartTooltip />
+                      <XAxis dataKey="stage" />
+                      <YAxis 
+                        label={{ value: 'Number of Orders', angle: -90, position: 'insideLeft' }}
+                        tickFormatter={(value) => Math.round(value).toLocaleString()}
+                      />
+                      <ChartTooltip 
+                        formatter={(value) => Math.round(value).toLocaleString()}
+                      />
                   <Legend />
-                  <Bar dataKey="early" stackId="a" fill={COLORS.success} name="Early" />
-                  <Bar dataKey="onTime" stackId="a" fill={COLORS.primary} name="On Time" />
-                  <Bar dataKey="late" stackId="a" fill={COLORS.danger} name="Late" />
+                      <Bar dataKey="Early" stackId="a" fill={COLORS.success} />
+                      <Bar dataKey="On Time" stackId="a" fill={COLORS.primary} />
+                      <Bar dataKey="Late" stackId="a" fill={COLORS.danger} />
                 </BarChart>
               </ChartContainer>
+                )
+              }, [orders])}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 5. Buyer & Segment Insights Dashboard */}
+        {/* 6. Buyer & Segment Insights Dashboard */}
         <TabsContent value="buyer" className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Card>
@@ -901,7 +2193,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle>Volume by Segment</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}} className="h-[400px] w-full">
+                <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
                   <PieChart>
                     <Pie
                       data={useMemo(() => {
@@ -916,7 +2208,7 @@ export function OrderDashboards({ orders = [] }) {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name}: ${Math.round(percent * 100)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -933,7 +2225,9 @@ export function OrderDashboards({ orders = [] }) {
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
-                    <ChartTooltip />
+                    <ChartTooltip 
+                      formatter={(value) => Math.round(value).toLocaleString()}
+                    />
                   </PieChart>
                 </ChartContainer>
               </CardContent>
@@ -944,7 +2238,7 @@ export function OrderDashboards({ orders = [] }) {
                 <CardTitle>Avg. Lead Time by Segment</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={{}} className="h-[400px] w-full">
+                <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
                   <BarChart data={useMemo(() => {
                     const bySegment = orders
                       .filter(o => o.createdAt && o.actualDeliveryCompleted)
@@ -964,8 +2258,10 @@ export function OrderDashboards({ orders = [] }) {
                   }, [orders])}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="segment" />
-                    <YAxis />
-                    <ChartTooltip />
+                    <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                    <ChartTooltip 
+                      formatter={(value) => `${Math.round(value)} days`}
+                    />
                     <Bar dataKey="avgLeadTime" fill={COLORS.primary} />
                   </BarChart>
                 </ChartContainer>
@@ -1021,7 +2317,7 @@ export function OrderDashboards({ orders = [] }) {
           </Card>
         </TabsContent>
 
-        {/* 6. SLA & Priority Management Dashboard */}
+        {/* 7. SLA & Priority Management Dashboard */}
         <TabsContent value="sla" className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
@@ -1160,7 +2456,7 @@ export function OrderDashboards({ orders = [] }) {
               <CardTitle>SLA Compliance by Priority</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={{}} className="h-[400px] w-full">
+              <ChartContainer config={{}} className="h-[250px] sm:h-[300px] lg:h-[400px] w-full">
                 <BarChart data={useMemo(() => {
                   const byPriority = orders
                     .filter(o => o.priority && o.deliveryEta && o.actualDeliveryCompleted)
@@ -1183,8 +2479,10 @@ export function OrderDashboards({ orders = [] }) {
                 }, [orders])}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="priority" />
-                  <YAxis />
-                  <ChartTooltip />
+                  <YAxis tickFormatter={(value) => `${Math.round(value)}%`} />
+                  <ChartTooltip 
+                    formatter={(value) => `${Math.round(value)}%`}
+                  />
                   <Bar dataKey="compliance" fill={COLORS.primary} />
                 </BarChart>
               </ChartContainer>
@@ -1192,192 +2490,6 @@ export function OrderDashboards({ orders = [] }) {
           </Card>
         </TabsContent>
 
-        {/* 7. Financial & Margin Analytics Dashboard */}
-        <TabsContent value="financial" className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${useMemo(() => {
-                    return orders
-                      .filter(o => o.pricingJson?.total)
-                      .reduce((sum, o) => sum + (o.pricingJson.total || 0), 0)
-                      .toLocaleString()
-                  }, [orders])}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Total Gross Margin</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${useMemo(() => {
-                    const totalMargin = orders
-                      .filter(o => o.pricingJson?.total)
-                      .reduce((sum, o) => {
-                        const total = o.pricingJson.total || 0
-                        const cost = (o.pricingJson.chassisMsrp || 0) * 0.85 + 
-                                     (o.pricingJson.bodyPrice || 0) * 0.80 + 
-                                     (o.pricingJson.labor || 0) * 0.70
-                        return sum + (total - cost)
-                      }, 0)
-                    return totalMargin.toLocaleString()
-                  }, [orders])}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Avg. Margin %</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {useMemo(() => {
-                    const margins = orders
-                      .filter(o => o.pricingJson?.total)
-                      .map(o => {
-                        const total = o.pricingJson.total || 0
-                        const cost = (o.pricingJson.chassisMsrp || 0) * 0.85 + 
-                                     (o.pricingJson.bodyPrice || 0) * 0.80 + 
-                                     (o.pricingJson.labor || 0) * 0.70
-                        return total > 0 ? ((total - cost) / total) * 100 : 0
-                      })
-                    return margins.length > 0
-                      ? Math.round(margins.reduce((a, b) => a + b, 0) / margins.length)
-                      : 0
-                  }, [orders])}%
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">Avg. Order Value</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ${useMemo(() => {
-                    const totals = orders
-                      .filter(o => o.pricingJson?.total)
-                      .map(o => o.pricingJson.total)
-                    return totals.length > 0
-                      ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length).toLocaleString()
-                      : 0
-                  }, [orders])}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Margin % by Model</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-[400px] w-full">
-                <BarChart data={useMemo(() => {
-                  const byModel = orders
-                    .filter(o => o.pricingJson?.total && o.buildJson?.chassis?.series)
-                    .reduce((acc, o) => {
-                      const model = o.buildJson.chassis.series
-                      if (!acc[model]) {
-                        acc[model] = { model, margins: [] }
-                      }
-                      const total = o.pricingJson.total || 0
-                      const cost = (o.pricingJson.chassisMsrp || 0) * 0.85 + 
-                                   (o.pricingJson.bodyPrice || 0) * 0.80 + 
-                                   (o.pricingJson.labor || 0) * 0.70
-                      const marginPct = total > 0 ? ((total - cost) / total) * 100 : 0
-                      acc[model].margins.push(marginPct)
-                      return acc
-                    }, {})
-                  
-                  return Object.values(byModel).map(m => ({
-                    model: m.model,
-                    avgMargin: Math.round(m.margins.reduce((a, b) => a + b, 0) / m.margins.length)
-                  }))
-                }, [orders])}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="model" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
-                  <ChartTooltip />
-                  <Bar dataKey="avgMargin" fill={COLORS.primary} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue by Buyer Type Over Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-[400px] w-full">
-                <AreaChart data={useMemo(() => {
-                  const monthly = orders
-                    .filter(o => o.createdAt && o.pricingJson?.total)
-                    .reduce((acc, o) => {
-                      const month = new Date(o.createdAt).toISOString().slice(0, 7)
-                      const segment = o.buyerSegment || (o.inventoryStatus === 'STOCK' ? 'Dealer' : 
-                        (o.buyerName?.includes('Fleet') || o.buyerName?.includes('LLC') || o.buyerName?.includes('Corp') ? 'Fleet' : 'Retail'))
-                      if (!acc[month]) {
-                        acc[month] = { month, Fleet: 0, Retail: 0, Dealer: 0 }
-                      }
-                      acc[month][segment] = (acc[month][segment] || 0) + (o.pricingJson.total || 0)
-                      return acc
-                    }, {})
-                  
-                  return Object.values(monthly)
-                    .sort((a, b) => a.month.localeCompare(b.month))
-                }, [orders])}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip />
-                  <Legend />
-                  <Area type="monotone" dataKey="Fleet" stackId="1" stroke={COLORS.primary} fill={COLORS.primary} fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="Retail" stackId="1" stroke={COLORS.success} fill={COLORS.success} fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="Dealer" stackId="1" stroke={COLORS.warning} fill={COLORS.warning} fillOpacity={0.6} />
-                </AreaChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Delay Days vs Margin (Cost of Slippage)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-[400px] w-full">
-                <ScatterChart data={useMemo(() => {
-                  return orders
-                    .filter(o => o.deliveryEta && o.actualDeliveryCompleted && o.pricingJson?.total)
-                    .map(o => {
-                      const planned = new Date(o.deliveryEta)
-                      const actual = new Date(o.actualDeliveryCompleted)
-                      const delay = Math.ceil((actual - planned) / (1000 * 60 * 60 * 24))
-                      const total = o.pricingJson.total || 0
-                      const cost = (o.pricingJson.chassisMsrp || 0) * 0.85 + 
-                                   (o.pricingJson.bodyPrice || 0) * 0.80 + 
-                                   (o.pricingJson.labor || 0) * 0.70
-                      const margin = total - cost
-                      return { delay, margin }
-                    })
-                })}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="delay" name="Delay (days)" />
-                  <YAxis dataKey="margin" name="Margin ($)" />
-                  <ChartTooltip />
-                  <Scatter dataKey="margin" fill={COLORS.primary} />
-                </ScatterChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   )

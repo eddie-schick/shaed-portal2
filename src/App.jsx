@@ -299,7 +299,7 @@ const CHASSIS_CATALOG = [
   { id: 'f450', name: 'Chassis Cab F-450 XL (2025)', chassis_model: 'Chassis Cab F-450 XL', chassis_class: 'Class 4', gvwr: '≈ 14,000–16,500 lbs', common_bodies: ['Service Body', 'Dump Body', 'Contractor Body', 'Dry Freight Body', 'Ambulance'], description: 'More payload/towing than F-350 while staying maneuverable.', imageKey: 'F-450' },
   { id: 'f550', name: 'Chassis Cab F-550 XL (2025)', chassis_model: 'Chassis Cab F-550 XL', chassis_class: 'Class 5', gvwr: '≈ 17,500–19,500 lbs', common_bodies: ['Dump', 'Tow & Recovery', 'Bucket', 'Dry Freight Body', 'Refrigerated Body'], description: 'Workhorse for utilities, construction, and municipalities.', imageKey: 'F-550' },
   { id: 'f600', name: 'Chassis Cab F-600 XL (2025)', chassis_model: 'Chassis Cab F-600 XL', chassis_class: 'Class 6', gvwr: '≈ 22,000 lbs', common_bodies: ['Dump Body', 'Contractor Body', 'Dry Freight Body', 'Refrigerated Body', 'Service Body'], description: 'Bridges gap between Super Duty and true Medium Duty.', imageKey: 'F-600' },
-  { id: 'f650', name: 'F-650 SD Straight Frame (2025)', chassis_model: 'F-650 SD Straight Frame', chassis_class: 'Class 6/7', gvwr: '≈ 25,600–29,000 lbs', common_bodies: ['Dry Freight Body', 'Refrigerated Body', 'Dump Body', 'Tow & Recovery', 'Flatbed'], description: 'For heavier regional delivery, construction, and municipal operations.', imageKey: 'F-650' },
+  { id: 'f650', name: 'F-650 SD Straight Frame (2025)', chassis_model: 'F-650 SD Straight Frame', chassis_class: 'Class 6', gvwr: '≈ 25,600–29,000 lbs', common_bodies: ['Dry Freight Body', 'Refrigerated Body', 'Dump Body', 'Tow & Recovery', 'Flatbed'], description: 'For heavier regional delivery, construction, and municipal operations.', imageKey: 'F-650' },
   { id: 'f750', name: 'F-750 SD Straight Frame (2025)', chassis_model: 'F-750 SD Straight Frame', chassis_class: 'Class 7', gvwr: 'Up to 37,000 lbs', common_bodies: ['Refrigerated Body', 'Dump Body', 'Ambulance', 'Bucket', 'Tow & Recovery'], description: 'Heavy vocational use and long-haul vocational fleets.', imageKey: 'F-750' },
   { id: 'e350', name: 'E-Series Cutaway E-350 (2025)', chassis_model: 'E-Series Cutaway E-350', chassis_class: 'Class 3', gvwr: '10,050–12,700 lbs', common_bodies: ['Dry Freight Body', 'Refrigerated Body', 'Service Body', 'Ambulance'], description: 'Versatile cutaway platform for box and utility bodies.', imageKey: 'E-350' },
   { id: 'e450', name: 'E-Series Cutaway E-450 (2025)', chassis_model: 'E-Series Cutaway E-450', chassis_class: 'Class 4', gvwr: 'Up to 14,500 lbs', common_bodies: ['Dry Freight Body', 'Refrigerated Body', 'Service Body', 'Ambulance'], description: 'Higher GVWR cutaway ideal for delivery and service applications.', imageKey: 'E-450' }
@@ -311,7 +311,7 @@ function ChassisCard({ chassis }) {
   // Map of available images per chassis, sourced from the Vehicle Images folder
   const IMAGE_MAP = {
     'F-350': [
-      '/vehicle-images/F-350 Super Duty Chassis Cab.avif',
+      '/vehicle-images/F-350 Super Duty Chassis Cab 1.avif',
       '/vehicle-images/F-350 Super Duty Chassis Cab 2.avif',
       '/vehicle-images/F-350 Super Duty Chassis Cab 3.avif',
       '/vehicle-images/F-350 Super Duty Chassis Cab 4.avif',
@@ -320,7 +320,7 @@ function ChassisCard({ chassis }) {
       '/vehicle-images/F-350 Super Duty Chassis Cab 7.avif',
     ],
     'F-450': [
-      '/vehicle-images/F-450 Super Duty Chassis Cab.webp',
+      '/vehicle-images/F-450 Super Duty Chassis Cab 1.webp',
       '/vehicle-images/F-450 Super Duty Chassis Cab 2.webp',
       '/vehicle-images/F-450 Super Duty Chassis Cab 3.avif',
       '/vehicle-images/F-450 Super Duty Chassis Cab 4.avif',
@@ -329,7 +329,7 @@ function ChassisCard({ chassis }) {
       '/vehicle-images/F-450 Super Duty Chassis Cab 7.webp',
     ],
     'F-550': [
-      '/vehicle-images/F-550 Super Duty Chassis Cab.avif',
+      '/vehicle-images/F-550 Super Duty Chassis Cab 1.avif',
       '/vehicle-images/F-550 Super Duty Chassis Cab 2.png',
       '/vehicle-images/F-550 Super Duty Chassis Cab 3.png',
       '/vehicle-images/F-550 Super Duty Chassis Cab 4.avif',
@@ -338,7 +338,7 @@ function ChassisCard({ chassis }) {
       '/vehicle-images/F-550 Super Duty Chassis Cab 7.png',
     ],
     'F-600': [
-      '/vehicle-images/F-600 Super Duty Chassis Cab.avif',
+      '/vehicle-images/F-600 Super Duty Chassis Cab 1.avif',
       '/vehicle-images/F-600 Super Duty Chassis Cab 2.avif',
       '/vehicle-images/F-600 Super Duty Chassis Cab 3.avif',
       '/vehicle-images/F-600 Super Duty Chassis Cab 4.webp',
@@ -347,26 +347,26 @@ function ChassisCard({ chassis }) {
       '/vehicle-images/F-600 Super Duty Chassis Cab 7.avif',
     ],
     'F-650': [
+      '/vehicle-images/Ford F-650 1.avif',
       '/vehicle-images/F-650 2.avif',
-      '/vehicle-images/Ford F-650.avif',
       '/vehicle-images/Ford F-650 3.avif',
       '/vehicle-images/Ford F-650 4.avif',
       '/vehicle-images/Ford F-650 5.avif',
       '/vehicle-images/Ford F-650 6.avif',
     ],
     'F-750': [
-      '/vehicle-images/Ford F-750.avif',
+      '/vehicle-images/Ford F-750 1.avif',
       '/vehicle-images/Ford F-750 2.avif',
       '/vehicle-images/Ford F-750 3.avif',
       '/vehicle-images/Ford F-750 4.avif',
     ],
     'E-350': [
-      '/vehicle-images/Ford E-350.avif',
+      '/vehicle-images/E-350 1.avif',
+      '/vehicle-images/E-350 2.avif',
     ],
     'E-450': [
-      '/vehicle-images/E-450.avif',
+      '/vehicle-images/E-450 1.png',
       '/vehicle-images/E-450 2.avif',
-      '/vehicle-images/E-450.jpg',
     ],
   }
   const gallerySources = IMAGE_MAP[chassis.imageKey] || [
@@ -375,43 +375,67 @@ function ChassisCard({ chassis }) {
     `/vehicle-images/${chassis.imageKey}.jpg`,
     `/vehicle-images/${chassis.imageKey}.webp`
   ]
-  // Sort images so files without a trailing number come first, then 2,3,4...
+  // Sort images by number in filename (files without numbers treated as "1", then 1, 2, 3...)
   const sortImagesByFilename = (sources) => {
     const extractOrder = (path) => {
       const filename = path.split('/').pop() || ''
-      const match = filename.match(/(?:^|[^0-9])(\d+)(?=\.[^.]+$)/)
-      return match ? parseInt(match[1], 10) : null
+      // Match number before file extension (e.g., "E-350 1.avif" -> 1, "E-350.avif" -> 1)
+      const match = filename.match(/(?:^|\s)(\d+)(?=\.[^.]+$)/)
+      if (match) {
+        return parseInt(match[1], 10)
+      }
+      // Files without numbers are treated as "1" (base image)
+      return 1
     }
     return sources.slice().sort((a, b) => {
       const aNum = extractOrder(a)
       const bNum = extractOrder(b)
-      if (aNum == null && bNum != null) return -1
-      if (aNum != null && bNum == null) return 1
-      if (aNum == null && bNum == null) return a.localeCompare(b)
+      // Sort by number
       if (aNum !== bNum) return aNum - bNum
+      // If same number, sort alphabetically
       return a.localeCompare(b)
     })
   }
-  // Dedupe images by variant (base image or trailing number), ignoring file extensions
-  const dedupeByVariant = (sources) => {
-    const seen = new Set()
-    const result = []
-    const makeKey = (path) => {
-      const filename = (path.split('/').pop() || '').replace(/\.[^.]+$/, '')
-      const match = filename.match(/(\d+)\s*$/)
-      const variant = match ? `num:${parseInt(match[1], 10)}` : 'base'
-      return `${chassis.imageKey}:${variant}`
+  // Dedupe images by number - keep only one image per number
+  const dedupeByNumber = (sources) => {
+    const extractNumber = (path) => {
+      const filename = path.split('/').pop() || ''
+      const match = filename.match(/(?:^|\s)(\d+)(?=\.[^.]+$)/)
+      return match ? parseInt(match[1], 10) : 1
     }
+    const hasExplicitNumber = (path) => {
+      const filename = path.split('/').pop() || ''
+      return /(?:^|\s)(\d+)(?=\.[^.]+$)/.test(filename)
+    }
+    
+    // Group by number
+    const byNumber = new Map()
     for (const src of sources) {
-      const key = makeKey(src)
-      if (!seen.has(key)) {
-        seen.add(key)
-        result.push(src)
+      const num = extractNumber(src)
+      if (!byNumber.has(num)) {
+        byNumber.set(num, [])
       }
+      byNumber.get(num).push(src)
     }
+    
+    // For each number, keep only one image (prefer explicit numbered files)
+    const result = []
+    for (const [num, files] of Array.from(byNumber.entries()).sort((a, b) => a[0] - b[0])) {
+      // Sort files: explicit numbered files first, then alphabetically
+      files.sort((a, b) => {
+        const aHasNum = hasExplicitNumber(a)
+        const bHasNum = hasExplicitNumber(b)
+        if (aHasNum && !bHasNum) return -1
+        if (!aHasNum && bHasNum) return 1
+        return a.localeCompare(b)
+      })
+      // Keep only the first one (best match)
+      result.push(files[0])
+    }
+    
     return result
   }
-  const orderedGallerySources = dedupeByVariant(sortImagesByFilename(Array.from(new Set(gallerySources))))
+  const orderedGallerySources = dedupeByNumber(sortImagesByFilename(Array.from(new Set(gallerySources))))
   const handleConfigure = () => {
     // Start the new configurator flow with selected chassis prefilled
     const params = new URLSearchParams()
@@ -430,18 +454,23 @@ function ChassisCard({ chassis }) {
         <div className="space-y-4">
           <AspectRatio ratio={16/9} className="mb-2">
             <div className="w-full h-full overflow-x-auto flex snap-x snap-mandatory rounded">
-              {orderedGallerySources.map((src, idx) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt={`${chassis.name} ${idx + 1}`}
-                  className="w-full h-full object-cover rounded snap-start shrink-0"
-                  onError={(e) => {
-                    // Hide broken images from the gallery
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              ))}
+              {orderedGallerySources.map((src, idx) => {
+                // Flip first image for F-650, F-750, E-350, E-450 to match other chassis direction
+                const shouldFlip = idx === 0 && ['F-650', 'F-750', 'E-350', 'E-450'].includes(chassis.imageKey)
+                return (
+                  <img
+                    key={src}
+                    src={src}
+                    alt={`${chassis.name} ${idx + 1}`}
+                    className="w-full h-full object-cover rounded snap-start shrink-0"
+                    style={shouldFlip ? { transform: 'scaleX(-1)' } : {}}
+                    onError={(e) => {
+                      // Hide broken images from the gallery
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )
+              })}
             </div>
           </AspectRatio>
           <div className="mb-2">
@@ -578,7 +607,6 @@ function Marketplace() {
               <SelectItem value="Class 4">Class 4</SelectItem>
               <SelectItem value="Class 5">Class 5</SelectItem>
               <SelectItem value="Class 6">Class 6</SelectItem>
-              <SelectItem value="Class 6/7">Class 6/7</SelectItem>
               <SelectItem value="Class 7">Class 7</SelectItem>
             </SelectContent>
           </Select>

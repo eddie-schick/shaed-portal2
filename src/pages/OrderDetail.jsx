@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { advanceOrder, getOrder, publishListing, updateEtas, cancelOrder, setStock, getNotes, addNote, getStatusLabel, setInventoryStatus, ensureDemoOrder } from '@/lib/orderApi'
+import { calculateMargin } from '@/lib/marginUtils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ChevronRight, Clock, MessageSquare, Users, Settings, BarChart3 } from 'lucide-react'
 
 // Helper to read from localStorage
@@ -94,6 +96,7 @@ export function OrderDetailPage() {
   const [messageTo, setMessageTo] = useState('Dealer')
   const [activeTab, setActiveTab] = useState('timeline')
   const [mobileTabSheetOpen, setMobileTabSheetOpen] = useState(false)
+  const [showTrackingModal, setShowTrackingModal] = useState(false)
 
   const FLOW = ['CONFIG_RECEIVED', 'OEM_ALLOCATED', 'OEM_PRODUCTION', 'OEM_IN_TRANSIT', 'AT_UPFITTER', 'UPFIT_IN_PROGRESS', 'READY_FOR_DELIVERY', 'DELIVERED']
 
@@ -109,93 +112,78 @@ export function OrderDetailPage() {
     let eventsData = []
     
     try {
-      // Directly read from localStorage to get the exact order from the table
-      // This bypasses any transformations in ensureSeedData
-      // Use the same localStorage keys as orderApi.js
-      const orders = readLocal('orders', [])
-      let foundOrder = orders.find(o => o.id === id) || null
-      
-      // Try case-insensitive match if exact match fails
-      if (!foundOrder) {
-        const lc = String(id || '').toLowerCase()
-        foundOrder = orders.find(o => 
-          String(o.id || '').toLowerCase() === lc ||
-          String(o.stockNumber || '').toLowerCase() === lc ||
-          String(o.vin || '').toLowerCase() === lc
-        ) || null
-      }
-      
-      if (foundOrder) {
-        // Use the exact order object from localStorage (same as table)
-        // Make a shallow copy to avoid mutations, but keep all original data
-        resolved = { ...foundOrder }
-        // Get events for this order
-        const events = readLocal('orderEvents', [])
-        eventsData = events.filter(e => e.orderId === foundOrder.id) || []
-        console.log('Found actual order from table:', resolved.id, resolved.buildJson?.bodyType, resolved.status)
-      } else {
-        console.warn('Order not found in localStorage, trying getOrder API')
-        // Fallback to API if not found directly
-        try {
-          const data = await getOrder(id)
-          if (data?.order) {
-            resolved = data.order
-            eventsData = data.events || []
-            console.log('Found order via API:', resolved.id)
-          }
-        } catch (apiErr) {
-          console.warn('getOrder API failed:', apiErr)
-        }
+      // Use getOrder API as primary method to ensure consistency with table data
+      // This ensures we get the same transformations (status calculation, bodySpecs normalization) 
+      // that are applied in the Orders table via getOrders()
+      const data = await getOrder(id)
+      if (data?.order) {
+        resolved = data.order
+        eventsData = data.events || []
+        console.log('Loaded order via API (consistent with table):', resolved.id, resolved.buildJson?.bodyType, resolved.status)
       }
     } catch (err) {
-      console.error('Error loading order:', err)
-      // Last resort: try API
+      console.error('Error loading order via API:', err)
+      // Fallback: try reading directly from localStorage
       try {
-        const data = await getOrder(id)
-        if (data?.order) {
-          resolved = data.order
-          eventsData = data.events || []
+        const orders = readLocal('orders', [])
+        let foundOrder = orders.find(o => o.id === id) || null
+        
+        // Try case-insensitive match if exact match fails
+        if (!foundOrder) {
+          const lc = String(id || '').toLowerCase()
+          foundOrder = orders.find(o => 
+            String(o.id || '').toLowerCase() === lc ||
+            String(o.stockNumber || '').toLowerCase() === lc ||
+            String(o.vin || '').toLowerCase() === lc
+          ) || null
         }
-      } catch (apiErr) {
-        console.error('All order loading methods failed:', apiErr)
+        
+        if (foundOrder) {
+          resolved = { ...foundOrder }
+          const events = readLocal('orderEvents', [])
+          eventsData = events.filter(e => e.orderId === foundOrder.id) || []
+          console.log('Found order from localStorage fallback:', resolved.id)
+        }
+      } catch (localErr) {
+        console.error('Error reading from localStorage:', localErr)
       }
     }
 
     // Only create a fallback order as absolute last resort
-      if (!resolved) {
+    if (!resolved) {
       console.warn('Creating fallback order for ID:', id)
-        const now = new Date().toISOString()
-        resolved = {
-          id: String(id),
-          dealerCode: 'CVC101',
-          upfitterId: 'knapheide-detroit',
-          status: 'OEM_ALLOCATED',
-          oemEta: new Date(Date.now() + 10 * 86400000).toISOString(),
-          upfitterEta: new Date(Date.now() + 20 * 86400000).toISOString(),
-          deliveryEta: new Date(Date.now() + 35 * 86400000).toISOString(),
-          buildJson: {
-            bodyType: 'Service Body',
-            manufacturer: 'Knapheide',
-            chassis: { series: 'F-550', cab: 'Crew Cab', drivetrain: '4x4', wheelbase: '169', gvwr: '19500', powertrain: 'diesel-6.7L' },
-            bodySpecs: { bodyLength: 11, material: 'Steel' },
-            upfitter: { id: 'knapheide-detroit', name: 'Knapheide Detroit' },
-          },
-          pricingJson: { chassisMsrp: 64000, bodyPrice: 21000, optionsPrice: 2500, labor: 3800, freight: 1500, incentives: [], taxes: 0, total: 91800 },
-          inventoryStatus: 'STOCK',
-          isStock: true,
-          buyerName: '',
-          listingStatus: null,
-          dealerWebsiteStatus: 'DRAFT',
-          createdAt: now,
-          updatedAt: now,
+      const now = new Date().toISOString()
+      resolved = {
+        id: String(id),
+        dealerCode: 'CVC101',
+        upfitterId: 'knapheide-detroit',
+        status: 'OEM_ALLOCATED',
+        oemEta: new Date(Date.now() + 10 * 86400000).toISOString(),
+        upfitterEta: new Date(Date.now() + 20 * 86400000).toISOString(),
+        deliveryEta: new Date(Date.now() + 35 * 86400000).toISOString(),
+        buildJson: {
+          bodyType: 'Service Body',
+          manufacturer: 'Knapheide',
+          chassis: { series: 'F-550', cab: 'Crew Cab', drivetrain: '4x4', wheelbase: '169', gvwr: '19500', powertrain: 'diesel-6.7L' },
+          bodySpecs: { bodyLength: 11, material: 'Steel' },
+          upfitter: { id: 'knapheide-detroit', name: 'Knapheide Detroit' },
+        },
+        pricingJson: { chassisMsrp: 64000, bodyPrice: 21000, optionsPrice: 2500, labor: 3800, freight: 1500, incentives: [], taxes: 0, total: 91800 },
+        inventoryStatus: 'STOCK',
+        isStock: true,
+        buyerName: '',
+        listingStatus: null,
+        dealerWebsiteStatus: 'DRAFT',
+        createdAt: now,
+        updatedAt: now,
         stockNumber: `STK-${String(id).slice(-6)}`,
-          vin: '',
-        }
+        vin: '',
       }
+    }
 
     // Always set the order, even if it's a fallback
     console.log('Setting order:', resolved?.id)
-      setOrder(resolved)
+    setOrder(resolved)
     setEvents(eventsData || [])
     
     try {
@@ -267,6 +255,64 @@ export function OrderDetailPage() {
     if (order.buyerName?.includes('Fleet') || order.buyerName?.includes('LLC') || order.buyerName?.includes('Corp')) return 'Fleet'
     return 'Retail'
   }, [order])
+
+  // Compute Sales Status from inventory state and delivery dates relative to today
+  // This matches the logic from the Orders table
+  const getSalesStatus = (o) => {
+    if (!o) return 'STOCK'
+    const now = new Date()
+    const delivery = o?.deliveryEta ? new Date(o.deliveryEta) : null
+    // If not sold, it's still stock
+    if (o?.inventoryStatus !== 'SOLD') return 'STOCK'
+    // Sold but not yet delivered
+    if (!delivery || now < delivery) return 'PO_RECEIVED'
+    // Delivered: within 7 days = invoiced, after that = payment received
+    const daysSince = Math.floor((now - delivery) / 86400000)
+    if (daysSince < 7) return 'INVOICED'
+    return 'PAYMENT_RECEIVED'
+  }
+
+  const salesStatusLabel = {
+    STOCK: 'Stock',
+    PO_RECEIVED: 'PO Received',
+    INVOICED: 'Invoiced',
+    PAYMENT_RECEIVED: 'Payment Received',
+  }
+
+  // Compute sales status for the current order
+  const salesStatus = useMemo(() => getSalesStatus(order), [order])
+
+  // Generate unique contact names based on order ID
+  const contactNames = useMemo(() => {
+    if (!order?.id) return {}
+    const idHash = order.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    
+    const firstNames = [
+      'James', 'Sarah', 'Michael', 'Robert', 'David', 'Jennifer', 'Thomas', 'Emily',
+      'Christopher', 'Jessica', 'Daniel', 'Amanda', 'Matthew', 'Michelle', 'Andrew', 'Lisa',
+      'Joshua', 'Stephanie', 'Kevin', 'Nicole', 'Ryan', 'Ashley', 'Justin', 'Melissa',
+      'Brandon', 'Rachel', 'Tyler', 'Lauren', 'Jacob', 'Kimberly', 'Nicholas', 'Samantha'
+    ]
+    const lastNames = [
+      'Mitchell', 'Johnson', 'Chen', 'Williams', 'Martinez', 'Davis', 'Anderson', 'Taylor',
+      'Wilson', 'Moore', 'Jackson', 'Martin', 'Lee', 'Thompson', 'White', 'Harris',
+      'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young', 'Hall',
+      'Allen', 'King', 'Wright', 'Lopez', 'Hill', 'Scott', 'Green', 'Adams'
+    ]
+    
+    const getIndex = (offset) => (idHash + offset) % firstNames.length
+    
+    return {
+      buyer: `${firstNames[getIndex(0)]} ${lastNames[getIndex(0)]}`,
+      seller: `${firstNames[getIndex(1)]} ${lastNames[getIndex(1)]}`,
+      oem: `${firstNames[getIndex(2)]} ${lastNames[getIndex(2)]}`,
+      bodyManufacturer: `${firstNames[getIndex(3)]} ${lastNames[getIndex(3)]}`,
+      upfitter: `${firstNames[getIndex(4)]} ${lastNames[getIndex(4)]}`,
+      financing: `${firstNames[getIndex(5)]} ${lastNames[getIndex(5)]}`,
+      logistics: `${firstNames[getIndex(6)]} ${lastNames[getIndex(6)]}`,
+      accountManager: `${firstNames[getIndex(7)]} ${lastNames[getIndex(7)]}`
+    }
+  }, [order?.id])
 
   const doAdvance = async () => {
     if (!nextLabel) return
@@ -341,13 +387,12 @@ export function OrderDetailPage() {
     try { localStorage.setItem(`LS_MSGS_${id}`, JSON.stringify(next)) } catch {}
   }
 
-  // Calculate margin (simplified) - safe even if order is null
-  const margin = useMemo(() => {
+  // Calculate margin using industry-standard calculations
+  const marginData = useMemo(() => {
     if (!order?.pricingJson) return null
-    const total = order.pricingJson.total || 0
-    const cost = (order.pricingJson.chassisMsrp || 0) * 0.85 + (order.pricingJson.bodyPrice || 0) * 0.80 + (order.pricingJson.labor || 0) * 0.70
-    return total - cost
+    return calculateMargin(order.pricingJson, order)
   }, [order])
+  const margin = marginData?.margin || null
 
   // Calculate lead time - safe even if order is null
   const leadTime = useMemo(() => {
@@ -384,14 +429,9 @@ export function OrderDetailPage() {
             <div className="space-y-2 flex-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-wrap">
                 <CardTitle className="text-xl sm:text-2xl">Order {order.id}</CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant={orderType === 'Fleet' ? 'default' : orderType === 'Stock' ? 'secondary' : 'outline'}>
-                    {orderType}
-                  </Badge>
-                  <Badge variant={order.status === 'DELIVERED' ? 'default' : order.status === 'CANCELED' ? 'destructive' : 'secondary'}>
-                    {getStatusLabel(order.status)}
-                  </Badge>
-                </div>
+                <Badge variant={order.status === 'DELIVERED' ? 'default' : order.status === 'CANCELED' ? 'destructive' : 'secondary'}>
+                  {getStatusLabel(order.status)}
+                </Badge>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                 <span>Reference: {order.stockNumber || order.id}</span>
@@ -419,7 +459,7 @@ export function OrderDetailPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
               <div className="text-xs text-gray-500 uppercase mb-1">Created</div>
               <div>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'}</div>
@@ -436,7 +476,18 @@ export function OrderDetailPage() {
             </div>
             <div>
               <div className="text-xs text-gray-500 uppercase mb-1">Account Manager</div>
-              <div>Sales Rep {order.dealerCode || 'N/A'}</div>
+              <div>{contactNames.accountManager || 'N/A'}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase mb-1">Sales Status</div>
+              <Badge variant={
+                salesStatus === 'PAYMENT_RECEIVED' ? 'default' :
+                salesStatus === 'INVOICED' ? 'default' :
+                salesStatus === 'PO_RECEIVED' ? 'secondary' :
+                'outline'
+              }>
+                {salesStatusLabel[salesStatus]}
+              </Badge>
             </div>
           </div>
           {(order.buyerSegment || order.priority || (order.tags && order.tags.length > 0)) && (
@@ -688,8 +739,8 @@ export function OrderDetailPage() {
                     <TableCell>
                       {order.buyerName ? (
                         <>
-                          Contact: {order.buyerName.split(' ')[0]}<br />
-                          Email: contact@{order.buyerName.toLowerCase().replace(/\s+/g, '')}.com<br />
+                          Contact: {contactNames.buyer || 'James Mitchell'}<br />
+                          Email: {contactNames.buyer ? `${contactNames.buyer.split(' ')[0][0].toLowerCase()}.${contactNames.buyer.split(' ')[1].toLowerCase()}@${order.buyerName.toLowerCase().replace(/\s+/g, '')}.com` : `j.mitchell@${order.buyerName.toLowerCase().replace(/\s+/g, '')}.com`}<br />
                           Phone: (555) 123-4567
                         </>
                       ) : (
@@ -708,21 +759,41 @@ export function OrderDetailPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">Seller / Dealer</TableCell>
-                    <TableCell>Dealer {order.dealerCode || 'N/A'}</TableCell>
+                    <TableCell className="font-medium">Seller</TableCell>
+                    <TableCell>Ford Commercial Vehicle Center</TableCell>
                     <TableCell>
-                      Rep: Sales Rep {order.dealerCode || 'N/A'}<br />
-                      Email: sales@{order.dealerCode?.toLowerCase() || 'dealer'}.com<br />
+                      Contact: {contactNames.seller || 'Sarah Johnson'}<br />
+                      Email: {contactNames.seller ? `${contactNames.seller.split(' ')[0][0].toLowerCase()}.${contactNames.seller.split(' ')[1].toLowerCase()}@${order.dealerCode?.toLowerCase() || 'dealer'}.com` : `s.johnson@${order.dealerCode?.toLowerCase() || 'dealer'}.com`}<br />
                       Phone: (555) 234-5678
                     </TableCell>
-                    <TableCell>OEM: Ford Motor Company</TableCell>
+                    <TableCell>Location: 123 Commercial Vehicle Way, Detroit, MI 48201</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">Upfitter / Distributor</TableCell>
+                    <TableCell className="font-medium">OEM</TableCell>
+                    <TableCell>Ford Motor Company</TableCell>
+                    <TableCell>
+                      Contact: {contactNames.oem || 'Michael Chen'}<br />
+                      Email: {contactNames.oem ? `${contactNames.oem.split(' ')[0][0].toLowerCase()}.${contactNames.oem.split(' ')[1].toLowerCase()}@ford.com` : 'm.chen@ford.com'}<br />
+                      Phone: (555) 789-0123
+                    </TableCell>
+                    <TableCell>Manufacturer: Ford Motor Company</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Body Manufacturer</TableCell>
+                    <TableCell>{order.buildJson?.manufacturer || 'N/A'}</TableCell>
+                    <TableCell>
+                      Contact: {contactNames.bodyManufacturer || 'Robert Williams'}<br />
+                      Email: {contactNames.bodyManufacturer ? `${contactNames.bodyManufacturer.split(' ')[0][0].toLowerCase()}.${contactNames.bodyManufacturer.split(' ')[1].toLowerCase()}@${order.buildJson?.manufacturer?.toLowerCase().replace(/\s+/g, '') || 'manufacturer'}.com` : `r.williams@${order.buildJson?.manufacturer?.toLowerCase().replace(/\s+/g, '') || 'manufacturer'}.com`}<br />
+                      Phone: (555) 890-1234
+                    </TableCell>
+                    <TableCell>Body Type: {order.buildJson?.bodyType || 'N/A'}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Upfitter</TableCell>
                     <TableCell>{order.buildJson?.upfitter?.name || 'N/A'}</TableCell>
                     <TableCell>
-                      Contact: {order.buildJson?.upfitter?.name?.split(' ')[0] || 'N/A'}<br />
-                      Email: contact@{order.buildJson?.upfitter?.id || 'upfitter'}.com<br />
+                      Contact: {contactNames.upfitter || 'David Martinez'}<br />
+                      Email: {contactNames.upfitter ? `${contactNames.upfitter.split(' ')[0][0].toLowerCase()}.${contactNames.upfitter.split(' ')[1].toLowerCase()}@${order.buildJson?.upfitter?.id || 'upfitter'}.com` : `d.martinez@${order.buildJson?.upfitter?.id || 'upfitter'}.com`}<br />
                       Phone: (555) 345-6789
                     </TableCell>
                     <TableCell>Location: {order.buildJson?.upfitter?.name?.split(' - ')[1] || 'N/A'}</TableCell>
@@ -731,8 +802,9 @@ export function OrderDetailPage() {
                     <TableCell className="font-medium">Financing Provider</TableCell>
                     <TableCell>Ford Credit</TableCell>
                     <TableCell>
-                      Loan/Lease Type: Commercial Lease<br />
-                      Contact: (555) 456-7890
+                      Contact: {contactNames.financing || 'Jennifer Davis'}<br />
+                      Email: {contactNames.financing ? `${contactNames.financing.split(' ')[0][0].toLowerCase()}.${contactNames.financing.split(' ')[1].toLowerCase()}@fordcredit.com` : 'j.davis@fordcredit.com'}<br />
+                      Phone: (555) 456-7890
                     </TableCell>
                     <TableCell>Status: {order.inventoryStatus === 'SOLD' ? 'Approved' : 'Pending'}</TableCell>
                   </TableRow>
@@ -740,11 +812,17 @@ export function OrderDetailPage() {
                     <TableCell className="font-medium">Logistics Provider</TableCell>
                     <TableCell>Ford Logistics</TableCell>
                     <TableCell>
-                      Pickup: OEM Plant<br />
-                      Drop-off: {order.buildJson?.upfitter?.name?.split(' - ')[1] || 'Upfitter Location'}
+                      Contact: {contactNames.logistics || 'Thomas Anderson'}<br />
+                      Email: {contactNames.logistics ? `${contactNames.logistics.split(' ')[0][0].toLowerCase()}.${contactNames.logistics.split(' ')[1].toLowerCase()}@fordlogistics.com` : 't.anderson@fordlogistics.com'}<br />
+                      Phone: (555) 567-8901
                     </TableCell>
                     <TableCell>
-                      <a href="#" className="text-blue-600 underline">Tracking Link</a>
+                      <button 
+                        onClick={() => setShowTrackingModal(true)}
+                        className="text-blue-600 underline hover:text-blue-800 cursor-pointer"
+                      >
+                        Tracking Link
+                      </button>
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -865,24 +943,24 @@ export function OrderDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs sm:text-sm">Stage</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Planned ETA</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Actual Completed</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Duration (Days)</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Variance</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-center">Stage</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-center">Planned ETA</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-center">Actual Completed</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-center">Duration (Days)</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-center">Variance</TableHead>
                     </TableRow>
                   </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium">OEM In Transit</TableCell>
-                    <TableCell>{order.oemEta ? new Date(order.oemEta).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>{order.actualOemCompleted ? new Date(order.actualOemCompleted).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium text-center">OEM In Transit</TableCell>
+                    <TableCell className="text-center">{order.oemEta ? new Date(order.oemEta).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-center">{order.actualOemCompleted ? new Date(order.actualOemCompleted).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-center">
                       {order.actualOemCompleted && order.createdAt ? (
                         Math.ceil((new Date(order.actualOemCompleted) - new Date(order.createdAt)) / (1000 * 60 * 60 * 24))
                       ) : '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {order.actualOemCompleted && order.oemEta ? (() => {
                         const variance = Math.ceil((new Date(order.actualOemCompleted) - new Date(order.oemEta)) / (1000 * 60 * 60 * 24))
                         return (
@@ -894,15 +972,15 @@ export function OrderDetailPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">Upfit In Progress</TableCell>
-                    <TableCell>{order.upfitterEta ? new Date(order.upfitterEta).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>{order.actualUpfitterCompleted ? new Date(order.actualUpfitterCompleted).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium text-center">Upfit In Progress</TableCell>
+                    <TableCell className="text-center">{order.upfitterEta ? new Date(order.upfitterEta).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-center">{order.actualUpfitterCompleted ? new Date(order.actualUpfitterCompleted).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-center">
                       {order.actualUpfitterCompleted && order.actualOemCompleted ? (
                         Math.ceil((new Date(order.actualUpfitterCompleted) - new Date(order.actualOemCompleted)) / (1000 * 60 * 60 * 24))
                       ) : '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {order.actualUpfitterCompleted && order.upfitterEta ? (() => {
                         const variance = Math.ceil((new Date(order.actualUpfitterCompleted) - new Date(order.upfitterEta)) / (1000 * 60 * 60 * 24))
                         return (
@@ -914,15 +992,15 @@ export function OrderDetailPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">Delivery</TableCell>
-                    <TableCell>{order.deliveryEta ? new Date(order.deliveryEta).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>{order.actualDeliveryCompleted ? new Date(order.actualDeliveryCompleted).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium text-center">Delivery</TableCell>
+                    <TableCell className="text-center">{order.deliveryEta ? new Date(order.deliveryEta).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-center">{order.actualDeliveryCompleted ? new Date(order.actualDeliveryCompleted).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-center">
                       {order.actualDeliveryCompleted && order.actualUpfitterCompleted ? (
                         Math.ceil((new Date(order.actualDeliveryCompleted) - new Date(order.actualUpfitterCompleted)) / (1000 * 60 * 60 * 24))
                       ) : '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {order.actualDeliveryCompleted && order.deliveryEta ? (() => {
                         const variance = Math.ceil((new Date(order.actualDeliveryCompleted) - new Date(order.deliveryEta)) / (1000 * 60 * 60 * 24))
                         return (
@@ -977,29 +1055,6 @@ export function OrderDetailPage() {
                   <Button type="submit" disabled={saving || !noteText.trim()} size="sm">
                     Add Note
                   </Button>
-                </form>
-                <form onSubmit={onSendMessage} className="space-y-2">
-                  <div className="flex gap-2">
-                    <select
-                      className="border rounded px-2 py-1 text-sm"
-                      value={messageTo}
-                      onChange={(e) => setMessageTo(e.target.value)}
-                    >
-                      <option>OEM</option>
-                      <option>Upfitter</option>
-                      <option>Dealer</option>
-                      <option>Buyer</option>
-                    </select>
-                    <input
-                      className="flex-1 border rounded px-3 py-2 text-sm"
-                      placeholder="Type a message..."
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                    />
-                    <Button type="submit" disabled={!messageText.trim()} size="sm">
-                      Send
-                    </Button>
-                  </div>
                 </form>
               </div>
             </CardContent>
@@ -1108,12 +1163,12 @@ export function OrderDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Estimated Cost:</span>
-                  <span>${margin ? (order.pricingJson?.total - margin).toLocaleString() : 'N/A'}</span>
+                  <span>${marginData?.cost ? marginData.cost.toLocaleString() : 'N/A'}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="font-medium">Gross Margin:</span>
                   <span className={`font-medium ${margin && margin > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${margin ? margin.toLocaleString() : 'N/A'} ({margin ? ((margin / order.pricingJson?.total) * 100).toFixed(1) : '0'}%)
+                    ${margin ? margin.toLocaleString() : 'N/A'} ({marginData?.marginPercent ? marginData.marginPercent.toFixed(1) : '0'}%)
                   </span>
                 </div>
               </CardContent>
@@ -1214,6 +1269,182 @@ export function OrderDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Tracking Modal */}
+      <Dialog open={showTrackingModal} onOpenChange={setShowTrackingModal}>
+        <DialogContent className="max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 w-[95vw] sm:w-full">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-lg sm:text-xl">Shipment Tracking</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Order {order?.id} - {order?.stockNumber || 'N/A'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 sm:space-y-6 mt-2 sm:mt-4">
+            {/* Shipment Status */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg">Shipment Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 sm:space-y-4 pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Current Status</div>
+                    <Badge variant={
+                      order?.status === 'DELIVERED' ? 'default' :
+                      order?.status === 'OEM_IN_TRANSIT' || order?.status === 'AT_UPFITTER' ? 'secondary' :
+                      'outline'
+                    } className="text-xs sm:text-sm">
+                      {getStatusLabel(order?.status || 'CONFIG_RECEIVED')}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Carrier</div>
+                    <div className="text-sm sm:text-base">Ford Logistics</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Tracking Number</div>
+                    <div className="text-sm sm:text-base font-mono break-all">TRK-{order?.id?.slice(-8) || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase mb-1">Estimated Delivery</div>
+                    <div className="text-sm sm:text-base">
+                      {order?.deliveryEta ? new Date(order.deliveryEta).toLocaleDateString() : 'TBD'}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Map */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg">Current Location</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="w-full h-64 sm:h-80 md:h-96 rounded-lg overflow-hidden border">
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2990.274257380938!2d-70.56068388481569!3d41.45496659976631!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89e52963ac45bbcb%3A0x05c8e81b3550517!2sProvincetown%20Harbor!5e0!3m2!1sen!2sus!4v1671222966401!5m2!1sen!2sus"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen={true}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Shipment Location"
+                  />
+                </div>
+                <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-600">
+                  <div className="font-medium mb-0.5 sm:mb-1">Last Update:</div>
+                  <div className="break-words">{new Date().toLocaleString()}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tracking Timeline */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg">Tracking History</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3 sm:space-y-4">
+                  {order?.status && (() => {
+                    const statusIndex = FLOW.indexOf(order.status)
+                    const trackingEvents = []
+                    
+                    // Generate tracking events based on order status
+                    if (statusIndex >= 0) {
+                      trackingEvents.push({
+                        status: 'CONFIG_RECEIVED',
+                        location: 'Ford Commercial Vehicle Center',
+                        timestamp: order.createdAt || new Date().toISOString(),
+                        description: 'Order received and configuration confirmed'
+                      })
+                    }
+                    if (statusIndex >= 1) {
+                      trackingEvents.push({
+                        status: 'OEM_ALLOCATED',
+                        location: 'Ford Manufacturing Plant',
+                        timestamp: order.oemEta ? new Date(new Date(order.oemEta).getTime() - 5 * 86400000).toISOString() : new Date().toISOString(),
+                        description: 'Chassis allocated to production line'
+                      })
+                    }
+                    if (statusIndex >= 2) {
+                      trackingEvents.push({
+                        status: 'OEM_PRODUCTION',
+                        location: 'Ford Manufacturing Plant',
+                        timestamp: order.oemEta ? new Date(new Date(order.oemEta).getTime() - 3 * 86400000).toISOString() : new Date().toISOString(),
+                        description: 'Chassis in production'
+                      })
+                    }
+                    if (statusIndex >= 3) {
+                      trackingEvents.push({
+                        status: 'OEM_IN_TRANSIT',
+                        location: 'In Transit',
+                        timestamp: order.oemEta || new Date().toISOString(),
+                        description: 'Chassis shipped from OEM to upfitter'
+                      })
+                    }
+                    if (statusIndex >= 4) {
+                      trackingEvents.push({
+                        status: 'AT_UPFITTER',
+                        location: order.buildJson?.upfitter?.name || 'Upfitter Facility',
+                        timestamp: order.upfitterEta ? new Date(new Date(order.upfitterEta).getTime() - 2 * 86400000).toISOString() : new Date().toISOString(),
+                        description: 'Chassis arrived at upfitter facility'
+                      })
+                    }
+                    if (statusIndex >= 5) {
+                      trackingEvents.push({
+                        status: 'UPFIT_IN_PROGRESS',
+                        location: order.buildJson?.upfitter?.name || 'Upfitter Facility',
+                        timestamp: order.upfitterEta || new Date().toISOString(),
+                        description: 'Upfit work in progress'
+                      })
+                    }
+                    if (statusIndex >= 6) {
+                      trackingEvents.push({
+                        status: 'READY_FOR_DELIVERY',
+                        location: order.buildJson?.upfitter?.name || 'Upfitter Facility',
+                        timestamp: order.deliveryEta ? new Date(new Date(order.deliveryEta).getTime() - 1 * 86400000).toISOString() : new Date().toISOString(),
+                        description: 'Vehicle ready for final delivery'
+                      })
+                    }
+                    if (statusIndex >= 7) {
+                      trackingEvents.push({
+                        status: 'DELIVERED',
+                        location: 'Ford Commercial Vehicle Center',
+                        timestamp: order.deliveryEta || new Date().toISOString(),
+                        description: 'Vehicle delivered to dealer'
+                      })
+                    }
+
+                    return trackingEvents.map((event, idx) => (
+                      <div key={idx} className="flex gap-2 sm:gap-4">
+                        <div className="flex flex-col items-center flex-shrink-0">
+                          <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
+                            idx === trackingEvents.length - 1 ? 'bg-blue-600' : 'bg-green-600'
+                          }`} />
+                          {idx < trackingEvents.length - 1 && (
+                            <div className="w-0.5 h-full bg-gray-200 mt-1" />
+                          )}
+                        </div>
+                        <div className="flex-1 pb-3 sm:pb-4 min-w-0">
+                          <div className="font-medium text-xs sm:text-sm break-words">{getStatusLabel(event.status)}</div>
+                          <div className="text-xs text-gray-500 mt-0.5 sm:mt-1 break-words">{event.location}</div>
+                          <div className="text-xs text-gray-400 mt-0.5 sm:mt-1 break-words">
+                            {new Date(event.timestamp).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-0.5 sm:mt-1 break-words">{event.description}</div>
+                        </div>
+                      </div>
+                    ))
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
