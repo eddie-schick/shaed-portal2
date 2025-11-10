@@ -920,11 +920,25 @@ function ensureSeedData() {
     { id: 'henderson-salt-lake', name: 'Henderson Products - Salt Lake City' },
     { id: 'rockport-columbus', name: 'Rockport - Columbus' },
   ]
+  
+  // Helper function to generate deterministic random number from string
+  const hashString = (str) => {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    return Math.abs(hash)
+  }
+
   while (orders.length < 154) {
     const idx = orders.length
     const id = `ORD-${(now + idx).toString(36).toUpperCase()}`
     const statuses = ORDER_FLOW
-    const status = statuses[Math.min(idx % statuses.length, statuses.length - 1)]
+    // Use order ID hash to randomize status assignment
+    const statusHash = hashString(id)
+    const status = statuses[statusHash % statuses.length]
     const createdAt = new Date(now - (idx + 10) * 86400000).toISOString()
     const up = upfitters[idx % upfitters.length]
     // Generate ETAs for all
@@ -1043,7 +1057,9 @@ function ensureSeedData() {
       if (seen.has(idCandidate)) { counter++; continue }
       seen.add(idCandidate)
       const up = upfittersForTopup[idx % upfittersForTopup.length]
-      const status = ORDER_FLOW[Math.min(idx % ORDER_FLOW.length, ORDER_FLOW.length - 1)]
+      // Use order ID hash to randomize status assignment
+      const statusHash = hashString(idCandidate)
+      const status = ORDER_FLOW[statusHash % ORDER_FLOW.length]
       const etas = (() => {
         let oemEta = mkDate(10 + (idx % 15))
         let upfitterEta = mkDate(20 + (idx % 15))

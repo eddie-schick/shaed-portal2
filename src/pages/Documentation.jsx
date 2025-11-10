@@ -1164,6 +1164,29 @@ function DealJacketDetail() {
     setDocuments(orderDocuments)
   }
 
+  // Helper function to generate deterministic random number from string
+  const hashString = (str) => {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    return Math.abs(hash)
+  }
+
+  // Helper function to shuffle array deterministically based on seed
+  const seededShuffle = (array, seed) => {
+    const shuffled = [...array]
+    let currentSeed = seed
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      currentSeed = (currentSeed * 9301 + 49297) % 233280 // Linear congruential generator
+      const j = currentSeed % (i + 1)
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
+  }
+
   function ensureDemoDocuments() {
     if (!id) return
     
@@ -1174,29 +1197,44 @@ function DealJacketDetail() {
     if (orderDocuments.length === 0) {
       const demoDocuments = []
       
-      // Get a subset of documents to mark as uploaded (about 30-40% of required docs)
+      // Generate deterministic seed from order ID
+      const orderHash = hashString(id)
+      
+      // Get all documents (required and optional)
       const allRequiredDocs = Object.values(DOCUMENT_CATEGORIES)
         .flatMap(cat => cat.documents.filter(d => d.required))
-      
-      // Select some required documents to have uploaded
-      const uploadedRequiredDocs = allRequiredDocs.slice(0, Math.floor(allRequiredDocs.length * 0.35))
-      
-      // Also add some optional documents
       const allOptionalDocs = Object.values(DOCUMENT_CATEGORIES)
         .flatMap(cat => cat.documents.filter(d => !d.required))
-        .slice(0, Math.floor(Object.values(DOCUMENT_CATEGORIES).flatMap(cat => cat.documents).length * 0.2))
       
-      const docsToUpload = [...uploadedRequiredDocs, ...allOptionalDocs]
+      // Shuffle documents deterministically based on order ID
+      const shuffledRequired = seededShuffle(allRequiredDocs, orderHash)
+      const shuffledOptional = seededShuffle(allOptionalDocs, orderHash + 1000)
+      
+      // Select random number of required docs (30-70% of required docs)
+      const requiredCount = Math.floor((orderHash % 41) + (allRequiredDocs.length * 0.3)) // 30-70% range
+      const uploadedRequiredDocs = shuffledRequired.slice(0, Math.min(requiredCount, allRequiredDocs.length))
+      
+      // Select random number of optional docs (10-40% of optional docs)
+      const optionalCount = Math.floor(((orderHash * 7) % 31) + (allOptionalDocs.length * 0.1)) // 10-40% range
+      const uploadedOptionalDocs = shuffledOptional.slice(0, Math.min(optionalCount, allOptionalDocs.length))
+      
+      const docsToUpload = [...uploadedRequiredDocs, ...uploadedOptionalDocs]
       
       docsToUpload.forEach((doc, index) => {
+        // Use deterministic "random" dates based on order ID and document index
+        const dateSeed = hashString(`${id}_${doc.id}_${index}`)
+        const daysAgo = (dateSeed % 14) + 1 // 1-14 days ago
+        const fileSizeSeed = hashString(`${id}_${doc.id}_size`)
+        const fileSize = (fileSizeSeed % 4900000) + 100000 // 100KB to 5MB
+        
         const docData = {
           id: `doc_${id}_${doc.id}_${Date.now()}_${index}`,
           documentId: doc.id,
           documentName: doc.name,
           fileName: `${doc.name.replace(/\s+/g, '_')}_${id}.pdf`,
-          fileSize: Math.floor(Math.random() * 5000000) + 100000, // 100KB to 5MB
+          fileSize: fileSize,
           fileType: 'application/pdf',
-          uploadedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(), // Random date within last 7 days
+          uploadedAt: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
           orderId: id,
         }
         demoDocuments.push(docData)

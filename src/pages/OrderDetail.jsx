@@ -314,6 +314,63 @@ export function OrderDetailPage() {
     }
   }, [order?.id])
 
+  // Generate unique tracking location based on order ID
+  const trackingLocation = useMemo(() => {
+    if (!order?.id) {
+      return {
+        lat: 41.45496659976631,
+        lng: -70.56068388481569,
+        place: 'Provincetown Harbor',
+        embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2990.274257380938!2d-70.56068388481569!3d41.45496659976631!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89e52963ac45bbcb%3A0x05c8e81b3550517!2sProvincetown%20Harbor!5e0!3m2!1sen!2sus!4v1671222966401!5m2!1sen!2sus'
+      }
+    }
+    
+    const idHash = order.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    
+    // Different locations across the US (manufacturing plants, distribution centers, etc.)
+    const locations = [
+      { lat: 42.3314, lng: -83.0458, place: 'Detroit, MI', name: 'Ford Manufacturing Plant - Detroit' },
+      { lat: 40.7128, lng: -74.0060, place: 'New York, NY', name: 'Ford Distribution Center - New York' },
+      { lat: 34.0522, lng: -118.2437, place: 'Los Angeles, CA', name: 'Ford Distribution Center - Los Angeles' },
+      { lat: 29.7604, lng: -95.3698, place: 'Houston, TX', name: 'Ford Manufacturing Plant - Houston' },
+      { lat: 41.8781, lng: -87.6298, place: 'Chicago, IL', name: 'Ford Distribution Center - Chicago' },
+      { lat: 33.4484, lng: -112.0740, place: 'Phoenix, AZ', name: 'Ford Distribution Center - Phoenix' },
+      { lat: 39.9526, lng: -75.1652, place: 'Philadelphia, PA', name: 'Ford Distribution Center - Philadelphia' },
+      { lat: 32.7767, lng: -96.7970, place: 'Dallas, TX', name: 'Ford Distribution Center - Dallas' },
+      { lat: 37.7749, lng: -122.4194, place: 'San Francisco, CA', name: 'Ford Distribution Center - San Francisco' },
+      { lat: 47.6062, lng: -122.3321, place: 'Seattle, WA', name: 'Ford Distribution Center - Seattle' },
+      { lat: 39.7392, lng: -104.9903, place: 'Denver, CO', name: 'Ford Distribution Center - Denver' },
+      { lat: 25.7617, lng: -80.1918, place: 'Miami, FL', name: 'Ford Distribution Center - Miami' },
+      { lat: 33.7490, lng: -84.3880, place: 'Atlanta, GA', name: 'Ford Distribution Center - Atlanta' },
+      { lat: 45.5152, lng: -122.6784, place: 'Portland, OR', name: 'Ford Distribution Center - Portland' },
+      { lat: 44.9778, lng: -93.2650, place: 'Minneapolis, MN', name: 'Ford Distribution Center - Minneapolis' },
+      { lat: 35.2271, lng: -80.8431, place: 'Charlotte, NC', name: 'Ford Distribution Center - Charlotte' },
+      { lat: 36.1627, lng: -86.7816, place: 'Nashville, TN', name: 'Ford Distribution Center - Nashville' },
+      { lat: 38.6270, lng: -90.1994, place: 'St. Louis, MO', name: 'Ford Distribution Center - St. Louis' },
+      { lat: 40.4406, lng: -79.9959, place: 'Pittsburgh, PA', name: 'Ford Distribution Center - Pittsburgh' },
+      { lat: 41.2565, lng: -95.9345, place: 'Omaha, NE', name: 'Ford Distribution Center - Omaha' },
+      { lat: 35.4676, lng: -97.5164, place: 'Oklahoma City, OK', name: 'Ford Distribution Center - Oklahoma City' },
+      { lat: 36.1699, lng: -115.1398, place: 'Las Vegas, NV', name: 'Ford Distribution Center - Las Vegas' },
+      { lat: 43.6532, lng: -79.3832, place: 'Toronto, ON', name: 'Ford Distribution Center - Toronto' },
+      { lat: 45.5017, lng: -73.5673, place: 'Montreal, QC', name: 'Ford Distribution Center - Montreal' },
+    ]
+    
+    const locationIndex = idHash % locations.length
+    const location = locations[locationIndex]
+    
+    // Generate Google Maps embed URL using coordinates
+    // Using a simple format that centers on the coordinates
+    const embedUrl = `https://www.google.com/maps?q=${location.lat},${location.lng}&hl=en&z=12&output=embed`
+    
+    return {
+      lat: location.lat,
+      lng: location.lng,
+      place: location.place,
+      name: location.name,
+      embedUrl: embedUrl
+    }
+  }, [order?.id])
+
   const doAdvance = async () => {
     if (!nextLabel) return
     setSaving(true)
@@ -441,6 +498,14 @@ export function OrderDetailPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate('/ordermanagement?tab=orders')}>
                 Back to Orders
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => setShowTrackingModal(true)}
+              >
+                View Tracking Link
               </Button>
               <Button
                 variant="outline"
@@ -1417,7 +1482,12 @@ export function OrderDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tracking:</span>
-                  <a href="#" className="text-blue-600 underline">View GPS</a>
+                  <button 
+                    onClick={() => setShowTrackingModal(true)}
+                    className="text-blue-600 underline hover:text-blue-800 cursor-pointer"
+                  >
+                    View GPT Link
+                  </button>
                 </div>
               </CardContent>
             </Card>
@@ -1633,7 +1703,7 @@ export function OrderDetailPage() {
               <CardContent className="pt-0">
                 <div className="w-full h-64 sm:h-80 md:h-96 rounded-lg overflow-hidden border">
                   <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2990.274257380938!2d-70.56068388481569!3d41.45496659976631!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89e52963ac45bbcb%3A0x05c8e81b3550517!2sProvincetown%20Harbor!5e0!3m2!1sen!2sus!4v1671222966401!5m2!1sen!2sus"
+                    src={trackingLocation.embedUrl}
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
@@ -1644,7 +1714,9 @@ export function OrderDetailPage() {
                   />
                 </div>
                 <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-600">
-                  <div className="font-medium mb-0.5 sm:mb-1">Last Update:</div>
+                  <div className="font-medium mb-0.5 sm:mb-1">Location:</div>
+                  <div className="break-words">{trackingLocation.name || trackingLocation.place}</div>
+                  <div className="font-medium mb-0.5 sm:mb-1 mt-2">Last Update:</div>
                   <div className="break-words">{new Date().toLocaleString()}</div>
                 </div>
               </CardContent>
