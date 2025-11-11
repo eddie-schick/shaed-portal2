@@ -100,38 +100,42 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Material</Label>
-              <RadioGroup 
-                value={specs.material || ''} 
-                onValueChange={(value) => handleSpecChange('material', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.material.map((mat) => (
-                    <Label key={mat} htmlFor={`flatbed-mat-${mat}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={mat} id={`flatbed-mat-${mat}`} />
-                      <div className="font-medium">{mat}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="sideOptions">Side Configuration</Label>
-              <RadioGroup 
-                value={specs.sideOptions || ''} 
-                onValueChange={(value) => handleSpecChange('sideOptions', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.sideOptions.map((option) => (
-                    <Label key={option} htmlFor={`flatbed-side-${option}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={option} id={`flatbed-side-${option}`} />
-                      <div className="font-medium">{option}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.bedLength && (
+              <div>
+                <Label>Material</Label>
+                <RadioGroup 
+                  value={specs.material || ''} 
+                  onValueChange={(value) => handleSpecChange('material', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.material.map((mat) => (
+                      <Label key={mat} htmlFor={`flatbed-mat-${mat}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={mat} id={`flatbed-mat-${mat}`} />
+                        <div className="font-medium">{mat}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.bedLength && specs.material && (
+              <div>
+                <Label htmlFor="sideOptions">Side Configuration</Label>
+                <RadioGroup 
+                  value={specs.sideOptions || ''} 
+                  onValueChange={(value) => handleSpecChange('sideOptions', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.sideOptions.map((option) => (
+                      <Label key={option} htmlFor={`flatbed-side-${option}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={option} id={`flatbed-side-${option}`} />
+                        <div className="font-medium">{option}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -151,48 +155,54 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Material</Label>
-              <RadioGroup value={specs.material || ''} onValueChange={(value) => handleSpecChange('material', value)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.material.map((mat) => (
-                    <Label key={mat} htmlFor={`dump-mat-${mat}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={mat} id={`dump-mat-${mat}`} />
-                      <div className="font-medium">{mat}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>Side Height</Label>
-              <RadioGroup value={specs.sideHeight?.toString() || ''} onValueChange={(value) => handleSpecChange('sideHeight', parseInt(value))}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {bodyData.specifications.sideHeight.map((height) => (
-                    <Label key={height} htmlFor={`dump-side-${height}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={height.toString()} id={`dump-side-${height}`} />
-                      <div className="font-medium">{height} inches</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="hoistType">Hoist Type</Label>
-              <RadioGroup 
-                value={specs.hoistType || ''} 
-                onValueChange={(value) => handleSpecChange('hoistType', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.hoistType.map((type) => (
-                    <Label key={type} htmlFor={`hoist-${type}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={type} id={`hoist-${type}`} />
-                      <div className="font-medium">{type}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.bedLength && (
+              <div>
+                <Label>Material</Label>
+                <RadioGroup value={specs.material || ''} onValueChange={(value) => handleSpecChange('material', value)}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.material.map((mat) => (
+                      <Label key={mat} htmlFor={`dump-mat-${mat}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={mat} id={`dump-mat-${mat}`} />
+                        <div className="font-medium">{mat}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.bedLength && specs.material && (
+              <div>
+                <Label>Side Height</Label>
+                <RadioGroup value={specs.sideHeight?.toString() || ''} onValueChange={(value) => handleSpecChange('sideHeight', parseInt(value))}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {bodyData.specifications.sideHeight.map((height) => (
+                      <Label key={height} htmlFor={`dump-side-${height}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={height.toString()} id={`dump-side-${height}`} />
+                        <div className="font-medium">{height} inches</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.bedLength && specs.material && specs.sideHeight && (
+              <div>
+                <Label htmlFor="hoistType">Hoist Type</Label>
+                <RadioGroup 
+                  value={specs.hoistType || ''} 
+                  onValueChange={(value) => handleSpecChange('hoistType', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.hoistType.map((type) => (
+                      <Label key={type} htmlFor={`hoist-${type}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={type} id={`hoist-${type}`} />
+                        <div className="font-medium">{type}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -212,48 +222,54 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Box Height</Label>
-              <RadioGroup value={specs.height?.toString() || ''} onValueChange={(value) => handleSpecChange('height', parseInt(value))}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {bodyData.specifications.height.map((h) => (
-                    <Label key={h} htmlFor={`dry-h-${h}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={h.toString()} id={`dry-h-${h}`} />
-                      <div className="font-medium">{h} inches</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="doorType">Door Type</Label>
-              <RadioGroup 
-                value={specs.doorType || ''} 
-                onValueChange={(value) => handleSpecChange('doorType', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.doorType.map((type) => (
-                    <Label key={type} htmlFor={`door-${type}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={type} id={`door-${type}`} />
-                      <div className="font-medium">{type}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>Interior Options</Label>
-              <RadioGroup value={specs.interiorOptions || ''} onValueChange={(value) => handleSpecChange('interiorOptions', value)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.interiorOptions.map((option) => (
-                    <Label key={option} htmlFor={`int-${option}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={option} id={`int-${option}`} />
-                      <div className="font-medium">{option}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.length && (
+              <div>
+                <Label>Box Height</Label>
+                <RadioGroup value={specs.height?.toString() || ''} onValueChange={(value) => handleSpecChange('height', parseInt(value))}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {bodyData.specifications.height.map((h) => (
+                      <Label key={h} htmlFor={`dry-h-${h}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={h.toString()} id={`dry-h-${h}`} />
+                        <div className="font-medium">{h} inches</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.length && specs.height && (
+              <div>
+                <Label htmlFor="doorType">Door Type</Label>
+                <RadioGroup 
+                  value={specs.doorType || ''} 
+                  onValueChange={(value) => handleSpecChange('doorType', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.doorType.map((type) => (
+                      <Label key={type} htmlFor={`door-${type}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={type} id={`door-${type}`} />
+                        <div className="font-medium">{type}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.length && specs.height && specs.doorType && (
+              <div>
+                <Label>Interior Options</Label>
+                <RadioGroup value={specs.interiorOptions || ''} onValueChange={(value) => handleSpecChange('interiorOptions', value)}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.interiorOptions.map((option) => (
+                      <Label key={option} htmlFor={`int-${option}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={option} id={`int-${option}`} />
+                        <div className="font-medium">{option}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -273,64 +289,72 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Box Height</Label>
-              <RadioGroup value={specs.height?.toString() || ''} onValueChange={(value) => handleSpecChange('height', parseInt(value))}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {bodyData.specifications.height.map((h) => (
-                    <Label key={h} htmlFor={`ref-h-${h}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={h.toString()} id={`ref-h-${h}`} />
-                      <div className="font-medium">{h} inches</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="insulationPackage">Insulation Package</Label>
-              <RadioGroup 
-                value={specs.insulationPackage || ''} 
-                onValueChange={(value) => handleSpecChange('insulationPackage', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.insulationPackage.map((pkg) => (
-                    <Label key={pkg} htmlFor={`ins-${pkg}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={pkg} id={`ins-${pkg}`} />
-                      <div className="font-medium">{pkg}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>Refrigeration Unit</Label>
-              <RadioGroup value={specs.reeferUnit || ''} onValueChange={(value) => handleSpecChange('reeferUnit', value)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.reeferUnit.map((unit) => (
-                    <Label key={unit} htmlFor={`reefer-${unit}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={unit} id={`reefer-${unit}`} />
-                      <div className="font-medium">{unit}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="tempRange">Temperature Range</Label>
-              <RadioGroup 
-                value={specs.tempRange || ''} 
-                onValueChange={(value) => handleSpecChange('tempRange', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.tempRange.map((range) => (
-                    <Label key={range} htmlFor={`temp-${range}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={range} id={`temp-${range}`} />
-                      <div className="font-medium">{range}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.length && (
+              <div>
+                <Label>Box Height</Label>
+                <RadioGroup value={specs.height?.toString() || ''} onValueChange={(value) => handleSpecChange('height', parseInt(value))}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {bodyData.specifications.height.map((h) => (
+                      <Label key={h} htmlFor={`ref-h-${h}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={h.toString()} id={`ref-h-${h}`} />
+                        <div className="font-medium">{h} inches</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.length && specs.height && (
+              <div>
+                <Label htmlFor="insulationPackage">Insulation Package</Label>
+                <RadioGroup 
+                  value={specs.insulationPackage || ''} 
+                  onValueChange={(value) => handleSpecChange('insulationPackage', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.insulationPackage.map((pkg) => (
+                      <Label key={pkg} htmlFor={`ins-${pkg}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={pkg} id={`ins-${pkg}`} />
+                        <div className="font-medium">{pkg}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.length && specs.height && specs.insulationPackage && (
+              <div>
+                <Label>Refrigeration Unit</Label>
+                <RadioGroup value={specs.reeferUnit || ''} onValueChange={(value) => handleSpecChange('reeferUnit', value)}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.reeferUnit.map((unit) => (
+                      <Label key={unit} htmlFor={`reefer-${unit}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={unit} id={`reefer-${unit}`} />
+                        <div className="font-medium">{unit}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.length && specs.height && specs.insulationPackage && specs.reeferUnit && (
+              <div>
+                <Label htmlFor="tempRange">Temperature Range</Label>
+                <RadioGroup 
+                  value={specs.tempRange || ''} 
+                  onValueChange={(value) => handleSpecChange('tempRange', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.tempRange.map((range) => (
+                      <Label key={range} htmlFor={`temp-${range}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={range} id={`temp-${range}`} />
+                        <div className="font-medium">{range}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -350,38 +374,42 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label htmlFor="winchCapacity">Winch Capacity</Label>
-              <RadioGroup 
-                value={specs.winchCapacity || ''} 
-                onValueChange={(value) => handleSpecChange('winchCapacity', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.winchCapacity.map((capacity) => (
-                    <Label key={capacity} htmlFor={`winch-${capacity}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={capacity} id={`winch-${capacity}`} />
-                      <div className="font-medium">{capacity}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="wheelLift">Wheel Lift Capacity</Label>
-              <RadioGroup 
-                value={specs.wheelLift || ''} 
-                onValueChange={(value) => handleSpecChange('wheelLift', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.wheelLift.map((lift) => (
-                    <Label key={lift} htmlFor={`wheel-${lift}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={lift} id={`wheel-${lift}`} />
-                      <div className="font-medium">{lift}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.deckLength && (
+              <div>
+                <Label htmlFor="winchCapacity">Winch Capacity</Label>
+                <RadioGroup 
+                  value={specs.winchCapacity || ''} 
+                  onValueChange={(value) => handleSpecChange('winchCapacity', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.winchCapacity.map((capacity) => (
+                      <Label key={capacity} htmlFor={`winch-${capacity}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={capacity} id={`winch-${capacity}`} />
+                        <div className="font-medium">{capacity}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.deckLength && specs.winchCapacity && (
+              <div>
+                <Label htmlFor="wheelLift">Wheel Lift Capacity</Label>
+                <RadioGroup 
+                  value={specs.wheelLift || ''} 
+                  onValueChange={(value) => handleSpecChange('wheelLift', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.wheelLift.map((lift) => (
+                      <Label key={lift} htmlFor={`wheel-${lift}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={lift} id={`wheel-${lift}`} />
+                        <div className="font-medium">{lift}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -401,51 +429,57 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Side Reach</Label>
-              <RadioGroup value={specs.sideReach?.toString() || ''} onValueChange={(value) => handleSpecChange('sideReach', parseInt(value))}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {bodyData.specifications.sideReach.map((reach) => (
-                    <Label key={reach} htmlFor={`bucket-r-${reach}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={reach.toString()} id={`bucket-r-${reach}`} />
-                      <div className="font-medium">{reach} ft</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="insulated">Insulation</Label>
-              <RadioGroup 
-                value={specs.insulated || ''} 
-                onValueChange={(value) => handleSpecChange('insulated', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.insulated.map((option) => (
-                    <Label key={option} htmlFor={`ins-${option}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={option} id={`ins-${option}`} />
-                      <div className="font-medium">{option}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="bucketCapacity">Bucket Capacity</Label>
-              <RadioGroup 
-                value={specs.bucketCapacity || ''} 
-                onValueChange={(value) => handleSpecChange('bucketCapacity', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.bucketCapacity.map((capacity) => (
-                    <Label key={capacity} htmlFor={`bucket-cap-${capacity}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={capacity} id={`bucket-cap-${capacity}`} />
-                      <div className="font-medium">{capacity}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.workingHeight && (
+              <div>
+                <Label>Side Reach</Label>
+                <RadioGroup value={specs.sideReach?.toString() || ''} onValueChange={(value) => handleSpecChange('sideReach', parseInt(value))}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {bodyData.specifications.sideReach.map((reach) => (
+                      <Label key={reach} htmlFor={`bucket-r-${reach}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={reach.toString()} id={`bucket-r-${reach}`} />
+                        <div className="font-medium">{reach} ft</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.workingHeight && specs.sideReach && (
+              <div>
+                <Label htmlFor="insulated">Insulation</Label>
+                <RadioGroup 
+                  value={specs.insulated || ''} 
+                  onValueChange={(value) => handleSpecChange('insulated', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.insulated.map((option) => (
+                      <Label key={option} htmlFor={`ins-${option}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={option} id={`ins-${option}`} />
+                        <div className="font-medium">{option}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.workingHeight && specs.sideReach && specs.insulated && (
+              <div>
+                <Label htmlFor="bucketCapacity">Bucket Capacity</Label>
+                <RadioGroup 
+                  value={specs.bucketCapacity || ''} 
+                  onValueChange={(value) => handleSpecChange('bucketCapacity', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.bucketCapacity.map((capacity) => (
+                      <Label key={capacity} htmlFor={`bucket-cap-${capacity}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={capacity} id={`bucket-cap-${capacity}`} />
+                        <div className="font-medium">{capacity}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -465,38 +499,42 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label htmlFor="compartments">Compartment Configuration</Label>
-              <RadioGroup 
-                value={specs.compartments || ''} 
-                onValueChange={(value) => handleSpecChange('compartments', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.compartments.map((config) => (
-                    <Label key={config} htmlFor={`comp-${config}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={config} id={`comp-${config}`} />
-                      <div className="font-medium">{config} Compartments</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="ladderRack">Ladder Rack Type</Label>
-              <RadioGroup 
-                value={specs.ladderRack || ''} 
-                onValueChange={(value) => handleSpecChange('ladderRack', value)}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.ladderRack.map((type) => (
-                    <Label key={type} htmlFor={`rack-${type}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={type} id={`rack-${type}`} />
-                      <div className="font-medium">{type}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.bedLength && (
+              <div>
+                <Label htmlFor="compartments">Compartment Configuration</Label>
+                <RadioGroup 
+                  value={specs.compartments || ''} 
+                  onValueChange={(value) => handleSpecChange('compartments', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.compartments.map((config) => (
+                      <Label key={config} htmlFor={`comp-${config}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={config} id={`comp-${config}`} />
+                        <div className="font-medium">{config} Compartments</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.bedLength && specs.compartments && (
+              <div>
+                <Label htmlFor="ladderRack">Ladder Rack Type</Label>
+                <RadioGroup 
+                  value={specs.ladderRack || ''} 
+                  onValueChange={(value) => handleSpecChange('ladderRack', value)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.ladderRack.map((type) => (
+                      <Label key={type} htmlFor={`rack-${type}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={type} id={`rack-${type}`} />
+                        <div className="font-medium">{type}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -516,32 +554,36 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Compartments</Label>
-              <RadioGroup value={specs.compartments || ''} onValueChange={(value) => handleSpecChange('compartments', value)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.compartments.map((config) => (
-                    <Label key={config} htmlFor={`svc-comp-${config}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={config} id={`svc-comp-${config}`} />
-                      <div className="font-medium">{config} Compartments</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>Material</Label>
-              <RadioGroup value={specs.material || ''} onValueChange={(value) => handleSpecChange('material', value)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.material.map((mat) => (
-                    <Label key={mat} htmlFor={`svc-mat-${mat}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={mat} id={`svc-mat-${mat}`} />
-                      <div className="font-medium">{mat}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.bodyLength && (
+              <div>
+                <Label>Compartments</Label>
+                <RadioGroup value={specs.compartments || ''} onValueChange={(value) => handleSpecChange('compartments', value)}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.compartments.map((config) => (
+                      <Label key={config} htmlFor={`svc-comp-${config}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={config} id={`svc-comp-${config}`} />
+                        <div className="font-medium">{config} Compartments</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.bodyLength && specs.compartments && (
+              <div>
+                <Label>Material</Label>
+                <RadioGroup value={specs.material || ''} onValueChange={(value) => handleSpecChange('material', value)}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.material.map((mat) => (
+                      <Label key={mat} htmlFor={`svc-mat-${mat}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={mat} id={`svc-mat-${mat}`} />
+                        <div className="font-medium">{mat}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -561,32 +603,36 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Module Length</Label>
-              <RadioGroup value={specs.moduleLength?.toString() || ''} onValueChange={(value) => handleSpecChange('moduleLength', parseInt(value))}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {bodyData.specifications.moduleLength.map((ml) => (
-                    <Label key={ml} htmlFor={`amb-ml-${ml}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={ml.toString()} id={`amb-ml-${ml}`} />
-                      <div className="font-medium">{ml} in</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label>Equipment Package</Label>
-              <RadioGroup value={specs.equipment || ''} onValueChange={(value) => handleSpecChange('equipment', value)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {bodyData.specifications.equipment.map((e) => (
-                    <Label key={e} htmlFor={`amb-eq-${e}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={e} id={`amb-eq-${e}`} />
-                      <div className="font-medium">{e}</div>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
+            {specs.type && (
+              <div>
+                <Label>Module Length</Label>
+                <RadioGroup value={specs.moduleLength?.toString() || ''} onValueChange={(value) => handleSpecChange('moduleLength', parseInt(value))}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {bodyData.specifications.moduleLength.map((ml) => (
+                      <Label key={ml} htmlFor={`amb-ml-${ml}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={ml.toString()} id={`amb-ml-${ml}`} />
+                        <div className="font-medium">{ml} in</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.type && specs.moduleLength && (
+              <div>
+                <Label>Equipment Package</Label>
+                <RadioGroup value={specs.equipment || ''} onValueChange={(value) => handleSpecChange('equipment', value)}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {bodyData.specifications.equipment.map((e) => (
+                      <Label key={e} htmlFor={`amb-eq-${e}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={e} id={`amb-eq-${e}`} />
+                        <div className="font-medium">{e}</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 
@@ -606,47 +652,53 @@ export function BodySpecsForm({
                 </div>
               </RadioGroup>
             </div>
-            <div>
-              <Label>Box Height</Label>
-              <RadioGroup value={specs.boxHeight?.toString() || ''} onValueChange={(value) => handleSpecChange('boxHeight', parseInt(value))}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {bodyData.specifications.boxHeight.map((h) => (
-                    <Label key={h} htmlFor={`liftgate-h-${h}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <RadioGroupItem value={h.toString()} id={`liftgate-h-${h}`} />
-                      <div className="font-medium">{h} inches</div>
-                    </Label>
+            {specs.boxLength && (
+              <div>
+                <Label>Box Height</Label>
+                <RadioGroup value={specs.boxHeight?.toString() || ''} onValueChange={(value) => handleSpecChange('boxHeight', parseInt(value))}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {bodyData.specifications.boxHeight.map((h) => (
+                      <Label key={h} htmlFor={`liftgate-h-${h}`} className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <RadioGroupItem value={h.toString()} id={`liftgate-h-${h}`} />
+                        <div className="font-medium">{h} inches</div>
+                      </Label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.boxLength && specs.boxHeight && (
+              <div>
+                <Label htmlFor="liftgateType">Liftgate Type</Label>
+                <RadioGroup 
+                  value={specs.liftgateType || ''} 
+                  onValueChange={(value) => handleSpecChange('liftgateType', value)}
+                >
+                  {bodyData.specifications.liftgateType.map((type) => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <RadioGroupItem value={type} id={type} />
+                      <Label htmlFor={type}>{type}</Label>
+                    </div>
                   ))}
-                </div>
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="liftgateType">Liftgate Type</Label>
-              <RadioGroup 
-                value={specs.liftgateType || ''} 
-                onValueChange={(value) => handleSpecChange('liftgateType', value)}
-              >
-                {bodyData.specifications.liftgateType.map((type) => (
-                  <div key={type} className="flex items-center space-x-2">
-                    <RadioGroupItem value={type} id={type} />
-                    <Label htmlFor={type}>{type}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            <div>
-              <Label htmlFor="liftgateCapacity">Liftgate Capacity</Label>
-              <RadioGroup 
-                value={specs.liftgateCapacity || ''} 
-                onValueChange={(value) => handleSpecChange('liftgateCapacity', value)}
-              >
-                {bodyData.specifications.liftgateCapacity.map((capacity) => (
-                  <div key={capacity} className="flex items-center space-x-2">
-                    <RadioGroupItem value={capacity} id={capacity} />
-                    <Label htmlFor={capacity}>{capacity}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+                </RadioGroup>
+              </div>
+            )}
+            {specs.boxLength && specs.boxHeight && specs.liftgateType && (
+              <div>
+                <Label htmlFor="liftgateCapacity">Liftgate Capacity</Label>
+                <RadioGroup 
+                  value={specs.liftgateCapacity || ''} 
+                  onValueChange={(value) => handleSpecChange('liftgateCapacity', value)}
+                >
+                  {bodyData.specifications.liftgateCapacity.map((capacity) => (
+                    <div key={capacity} className="flex items-center space-x-2">
+                      <RadioGroupItem value={capacity} id={capacity} />
+                      <Label htmlFor={capacity}>{capacity}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
           </>
         )
 

@@ -55,9 +55,17 @@ export function ChassisForm({
   // Update selected trim when cab/drivetrain changes
   useEffect(() => {
     if (selectedChassis && values.cab && values.drivetrain) {
-      const trim = selectedChassis.trims?.find(t => 
+      let trim = selectedChassis.trims?.find(t => 
         t.cab === values.cab && t.drivetrain === values.drivetrain
       )
+      
+      // If 4x4 is selected but no trim exists, fall back to the corresponding 4x2 trim
+      if (!trim && values.drivetrain === '4x4') {
+        trim = selectedChassis.trims?.find(t => 
+          t.cab === values.cab && t.drivetrain === '4x2'
+        )
+      }
+      
       setSelectedTrim(trim)
     }
   }, [selectedChassis, values.cab, values.drivetrain])
@@ -92,9 +100,18 @@ export function ChassisForm({
     : []
   
   const availableDrivetrains = selectedChassis && values.cab
-    ? [...new Set(selectedChassis.trims
-        .filter(t => t.cab === values.cab)
-        .map(t => t.drivetrain))]
+    ? (() => {
+        const drivetrains = [...new Set(selectedChassis.trims
+          .filter(t => t.cab === values.cab)
+          .map(t => t.drivetrain))]
+        
+        // If 4x2 is available, also add 4x4 (if not already present)
+        if (drivetrains.includes('4x2') && !drivetrains.includes('4x4')) {
+          drivetrains.push('4x4')
+        }
+        
+        return drivetrains
+      })()
     : []
   
   const availableWheelbases = selectedTrim?.wheelbases || []
@@ -231,11 +248,11 @@ export function ChassisForm({
         </Card>
       )}
 
-      {/* Wheelbase & Suspension */}
-      {selectedTrim && (
+      {/* Wheelbase */}
+      {selectedTrim && values.drivetrain && (
         <Card>
           <CardHeader>
-            <CardTitle>Wheelbase & Suspension</CardTitle>
+            <CardTitle>Wheelbase</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -262,7 +279,17 @@ export function ChassisForm({
                 </p>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
 
+      {/* Suspension */}
+      {selectedTrim && values.drivetrain && values.wheelbase && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Suspension Package</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
               <Label>Suspension Package</Label>
               <RadioGroup value={values.suspensionPackage} onValueChange={(value) => handleChange('suspensionPackage', value)}>
@@ -287,7 +314,7 @@ export function ChassisForm({
       )}
 
       {/* Powertrain */}
-      {selectedTrim && (
+      {selectedTrim && values.drivetrain && values.wheelbase && values.suspensionPackage && (
         <Card>
           <CardHeader>
             <CardTitle>Powertrain</CardTitle>

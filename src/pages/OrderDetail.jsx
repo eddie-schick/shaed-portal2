@@ -1651,7 +1651,7 @@ export function OrderDetailPage() {
 
       {/* Tracking Modal */}
       <Dialog open={showTrackingModal} onOpenChange={setShowTrackingModal}>
-        <DialogContent className="max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 w-[95vw] sm:w-full">
+        <DialogContent className="max-w-4xl max-h-[80vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 w-[90vw] sm:w-full">
           <DialogHeader className="text-left">
             <DialogTitle className="text-lg sm:text-xl">Shipment Tracking</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
