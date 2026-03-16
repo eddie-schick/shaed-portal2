@@ -1104,13 +1104,13 @@ export function OrderDetailPage() {
                     return (
                       <div key={status} className={`relative flex items-start gap-3 sm:gap-4 ${isLast ? '' : 'pb-4 sm:pb-6'}`}>
                         <div className={`relative z-10 flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 ${
-                          isCompleted ? 'bg-green-600 border-green-600' : isCurrent ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'
-                        }`}>
+                          isCompleted ? '' : isCurrent ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'
+                        }`} style={isCompleted ? { backgroundColor: '#3B8C7D', borderColor: '#3B8C7D' } : undefined}>
                           {isCompleted && <span className="text-white text-xs">✓</span>}
                         </div>
                         <div className="flex-1 space-y-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className={`font-medium ${isCurrent ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'}`}>
+                            <span className={`font-medium ${isCurrent ? 'text-blue-600' : isCompleted ? '' : 'text-gray-500'}`} style={isCompleted ? { color: '#3B8C7D' } : undefined}>
                               {getStatusLabel(status)}
                             </span>
                             {isCurrent && <Badge variant="secondary">Current</Badge>}
@@ -1803,8 +1803,8 @@ export function OrderDetailPage() {
                       <div key={idx} className="flex gap-2 sm:gap-4">
                         <div className="flex flex-col items-center flex-shrink-0">
                           <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
-                            idx === trackingEvents.length - 1 ? 'bg-blue-600' : 'bg-green-600'
-                          }`} />
+                            idx === trackingEvents.length - 1 ? 'bg-blue-600' : ''
+                          }`} style={idx !== trackingEvents.length - 1 ? { backgroundColor: '#3B8C7D' } : undefined} />
                           {idx < trackingEvents.length - 1 && (
                             <div className="w-0.5 h-full bg-gray-200 mt-1" />
                           )}

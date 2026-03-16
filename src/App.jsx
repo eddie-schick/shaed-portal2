@@ -115,7 +115,7 @@ function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <Link to="/" className="inline-block" onClick={handleNavClick}>
-            <img src="/SHAED Logo - Updated.png" alt="SHAED Portal" className="h-12 md:h-14 lg:h-16 w-auto" />
+            <img src="/SHAED Logo - Updated.png" alt="SHAED Portal" className="h-10 md:h-12 lg:h-14 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -130,7 +130,7 @@ function Header() {
                     ? 'text-white'
                     : 'text-black hover:text-black'
                 }`}
-                style={location.pathname === item.href ? { backgroundColor: '#000000' } : {}}
+                style={location.pathname === item.href ? { backgroundColor: '#3B8C7D' } : {}}
                 onMouseEnter={(e) => {
                   if (location.pathname !== item.href) {
                     e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
@@ -179,7 +179,7 @@ function Header() {
                       ? 'text-white'
                       : 'text-black hover:text-black'
                   }`}
-                  style={location.pathname === item.href ? { backgroundColor: '#000000' } : {}}
+                  style={location.pathname === item.href ? { backgroundColor: '#3B8C7D' } : {}}
                   onMouseEnter={(e) => {
                     if (location.pathname !== item.href) {
                       e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';

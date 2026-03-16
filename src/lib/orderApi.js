@@ -68,7 +68,7 @@ const LS_NOTES = 'orderNotes'
 const LS_STOCK_SEQ = 'stockSequence'
 const LS_VIN_SEQ = 'vinSequence'
 const LS_SEED_VERSION = 'ordersSeedVersion'
-const CURRENT_SEED_VERSION = '2025-09-25-163' // Updated: enforce correct buyer names matching buyer type (detect and fix mismatches)
+const CURRENT_SEED_VERSION = '2026-03-16-001' // Updated: fix ETA-based status distribution so orders appear in all stages
 
 // Helper to get current user (for createdBy/updatedBy)
 function getCurrentUser() {
@@ -490,26 +490,43 @@ function seedDemoOrders(targetCount = 154) {
     const powertrain = powertrains[i % powertrains.length]
 
     const createdAt = mkDate(-(14 + i))
-    let oemEta = mkDate(10 + (i % 15))
-    let upfitterEta = mkDate(20 + (i % 15))
-    let deliveryEta = mkDate(35 + (i % 15))
-    // Simulate delays, overdue, and some on-time (near-term) deliveries
+    // Set ETA offsets (days from today) based on desired status
+    // so that calculateStatusFromEtas() returns the correct status on read
+    let oemOffset, upfitOffset, delivOffset
     let originalDeliveryEta = null
-    // Some orders have pushed delivery out (not yet delivered)
-    if (i % 7 === 0) {
-      originalDeliveryEta = deliveryEta
-      const delayDays = 7 + (i % 21) // 7-27 days
-      deliveryEta = mkDate(35 + (i % 15) + delayDays)
+    switch (status) {
+      case 'CONFIG_RECEIVED':
+        oemOffset = 20 + (i % 30); upfitOffset = 35 + (i % 30); delivOffset = 55 + (i % 30); break
+      case 'OEM_ALLOCATED':
+        oemOffset = 6 + (i % 10); upfitOffset = 20 + (i % 10); delivOffset = 40 + (i % 10); break
+      case 'OEM_PRODUCTION':
+        oemOffset = 3 + (i % 3); upfitOffset = 15 + (i % 5); delivOffset = 30 + (i % 5); break
+      case 'OEM_IN_TRANSIT':
+        oemOffset = 1 + (i % 2); upfitOffset = 12 + (i % 5); delivOffset = 28 + (i % 5); break
+      case 'AT_UPFITTER':
+        oemOffset = -(5 + (i % 10)); upfitOffset = 5 + (i % 10); delivOffset = 20 + (i % 10); break
+      case 'UPFIT_IN_PROGRESS':
+        oemOffset = -(10 + (i % 10)); upfitOffset = 1 + (i % 3); delivOffset = 15 + (i % 5); break
+      case 'READY_FOR_DELIVERY':
+        oemOffset = -(20 + (i % 10)); upfitOffset = -(3 + (i % 5)); delivOffset = 3 + (i % 10); break
+      case 'DELIVERED':
+        oemOffset = -(45 + (i % 30)); upfitOffset = -(25 + (i % 15)); delivOffset = -(5 + (i % 20)); break
+      default:
+        oemOffset = 10; upfitOffset = 25; delivOffset = 40
     }
-    // Some orders are overdue (ETA in the past) but not delivered
-    if (i % 11 === 0) {
-      originalDeliveryEta = originalDeliveryEta || deliveryEta
-      deliveryEta = mkDate(-(i % 5 + 1)) // already past due 1-5 days
+    // Simulate delays for some non-delivered orders
+    if (i % 7 === 0 && status !== 'DELIVERED') {
+      originalDeliveryEta = mkDate(delivOffset)
+      delivOffset += 7 + (i % 21)
     }
-    // Some orders are close (3-6 days ahead) to render as ON_TIME
-    if (i % 9 === 3) {
-      deliveryEta = mkDate(3 + (i % 4))
+    // Some orders are overdue (past due but not yet delivered)
+    if (i % 11 === 0 && status === 'READY_FOR_DELIVERY') {
+      originalDeliveryEta = originalDeliveryEta || mkDate(delivOffset)
+      delivOffset = -(i % 5 + 1) // past due 1-5 days
     }
+    let oemEta = mkDate(oemOffset)
+    let upfitterEta = mkDate(upfitOffset)
+    let deliveryEta = mkDate(delivOffset)
 
     // Final pass to guarantee sequentiality before building the order
     ;({ oemEta, upfitterEta, deliveryEta } = enforceEtaPolicy({ createdAt, status, oemEta, upfitterEta, deliveryEta }))
@@ -591,66 +608,20 @@ function seedDemoOrders(targetCount = 154) {
       updatedAt: createdAt,
       originalDeliveryEta: originalDeliveryEta,
     }
-    // Ensure all sales statuses appear by varying delivery/state
-    if (orders.length % 6 === 1) {
-      // Invoiced: delivered within last 7 days
-      const d = new Date()
-      d.setDate(d.getDate() - 3)
-      baseOrder.deliveryEta = d.toISOString()
-      baseOrder.status = 'DELIVERED'
+    // For DELIVERED orders, add varied actual completion dates
+    if (status === 'DELIVERED') {
       baseOrder.inventoryStatus = 'SOLD'
-      const enforced = enforceEtaPolicy({ createdAt: baseOrder.createdAt, status: baseOrder.status, oemEta: baseOrder.oemEta, upfitterEta: baseOrder.upfitterEta, deliveryEta: baseOrder.deliveryEta })
-      baseOrder.oemEta = enforced.oemEta
-      baseOrder.upfitterEta = enforced.upfitterEta
-      baseOrder.deliveryEta = enforced.deliveryEta
-      // Set actual completion dates for delivered orders with variance
+      // Set actual completion dates with variance
       const deliveryEtaDate = new Date(baseOrder.deliveryEta)
       const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
       deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
-      const deliveryDate = new Date(deliveryEtaDate)
-      baseOrder.actualDeliveryCompleted = deliveryDate.toISOString()
-      // Set OEM completion date (before upfitter)
-      const oemDate = new Date(deliveryDate)
-      oemDate.setDate(oemDate.getDate() - 15) // OEM completed 15 days before delivery
+      baseOrder.actualDeliveryCompleted = deliveryEtaDate.toISOString()
+      const oemDate = new Date(deliveryEtaDate)
+      oemDate.setDate(oemDate.getDate() - 15)
       baseOrder.actualOemCompleted = oemDate.toISOString()
-      // Set upfitter completion date (between OEM and delivery)
-      const upfitterDate = new Date(deliveryDate)
-      upfitterDate.setDate(upfitterDate.getDate() - 5) // Upfitter completed 5 days before delivery
+      const upfitterDate = new Date(deliveryEtaDate)
+      upfitterDate.setDate(upfitterDate.getDate() - 5)
       baseOrder.actualUpfitterCompleted = upfitterDate.toISOString()
-    } else if (orders.length % 6 === 2) {
-      // Payment received: delivered > 7 days ago
-      const d = new Date()
-      d.setDate(d.getDate() - 12)
-      baseOrder.deliveryEta = d.toISOString()
-      baseOrder.status = 'DELIVERED'
-      baseOrder.inventoryStatus = 'SOLD'
-      const enforced = enforceEtaPolicy({ createdAt: baseOrder.createdAt, status: baseOrder.status, oemEta: baseOrder.oemEta, upfitterEta: baseOrder.upfitterEta, deliveryEta: baseOrder.deliveryEta })
-      baseOrder.oemEta = enforced.oemEta
-      baseOrder.upfitterEta = enforced.upfitterEta
-      baseOrder.deliveryEta = enforced.deliveryEta
-      // Set actual completion dates for delivered orders with variance
-      const deliveryEtaDate = new Date(baseOrder.deliveryEta)
-      const varianceDays = (i % 16) - 5 // Range: -5 to +10 days
-      deliveryEtaDate.setDate(deliveryEtaDate.getDate() + varianceDays)
-      const deliveryDate = new Date(deliveryEtaDate)
-      baseOrder.actualDeliveryCompleted = deliveryDate.toISOString()
-      // Set OEM completion date (before upfitter)
-      const oemDate = new Date(deliveryDate)
-      oemDate.setDate(oemDate.getDate() - 15) // OEM completed 15 days before delivery
-      baseOrder.actualOemCompleted = oemDate.toISOString()
-      // Set upfitter completion date (between OEM and delivery)
-      const upfitterDate = new Date(deliveryDate)
-      upfitterDate.setDate(upfitterDate.getDate() - 5) // Upfitter completed 5 days before delivery
-      baseOrder.actualUpfitterCompleted = upfitterDate.toISOString()
-    } else if (orders.length % 6 === 0) {
-      // PO received: sold but not yet delivered (future ETA)
-      baseOrder.inventoryStatus = 'SOLD'
-      baseOrder.status = baseOrder.status === 'DELIVERED' ? 'READY_FOR_DELIVERY' : baseOrder.status
-      baseOrder.deliveryEta = mkDate(10 + (i % 10))
-      const enforced = enforceEtaPolicy({ createdAt: baseOrder.createdAt, status: baseOrder.status, oemEta: baseOrder.oemEta, upfitterEta: baseOrder.upfitterEta, deliveryEta: baseOrder.deliveryEta })
-      baseOrder.oemEta = enforced.oemEta
-      baseOrder.upfitterEta = enforced.upfitterEta
-      baseOrder.deliveryEta = enforced.deliveryEta
     }
     // For published units, ensure stock to satisfy UI rule
     if (baseOrder.dealerWebsiteStatus === 'PUBLISHED') {
