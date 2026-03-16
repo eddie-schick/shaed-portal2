@@ -100,9 +100,9 @@ function Header() {
   const location = useLocation()
 
   const navigation = [
-    { name: 'Catalog', href: '/' },
-    { name: 'Order Management', href: '/ordermanagement' },
-    { name: 'Documentation', href: '/documentation' },
+    { name: 'Shop', href: '/' },
+    { name: 'Track', href: '/ordermanagement' },
+    { name: 'Document', href: '/documentation' },
   ]
 
   // Function to scroll to top when navigating
@@ -115,7 +115,7 @@ function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <Link to="/" className="inline-block" onClick={handleNavClick}>
-            <img src="/SHAED Logo.png" alt="SHAED Portal" className="h-12 md:h-14 lg:h-16 w-auto" />
+            <img src="/SHAED Logo - Updated.png" alt="SHAED Portal" className="h-12 md:h-14 lg:h-16 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -574,8 +574,8 @@ function Marketplace() {
       {/* Full-bleed Hero */}
       <Hero
         rotatingWords={["Customers", "Dealers", "Upfitters", "Fleets"]}
-        ctaPrimary={{ label: "Explore Catalog", href: "/" }}
-        ctaSecondary={{ label: "Order Management", href: "/ordermanagement" }}
+        ctaPrimary={{ label: "Shop", href: "/" }}
+        ctaSecondary={{ label: "Track", href: "/ordermanagement" }}
         showSearch={true}
       />
 
@@ -680,7 +680,14 @@ function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-center gap-1 text-gray-500">
           <span>Powered by</span>
-          <img src="/SHAED Logo.png" alt="SHAED" className="h-6 w-auto" />
+          <a
+            href="https://shaed.ai/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center"
+          >
+            <img src="/SHAED Logo - Updated.png" alt="SHAED" className="h-6 w-auto" />
+          </a>
         </div>
       </div>
     </footer>

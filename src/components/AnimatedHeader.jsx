@@ -6,7 +6,7 @@ export function AnimatedHeader() {
     'Upfitters',
     'Logistics',
     'Order Tracking',
-    'Documentation',
+    'Document',
     'Recommendations',
   ]
 
@@ -15,15 +15,15 @@ export function AnimatedHeader() {
       <section className="hero-band overflow-hidden">
         <div className="relative w-full min-h-[60vh] sm:min-h-[68vh] md:min-h-[75vh] flex items-center justify-center">
           <div className="hero-content text-center px-6 py-16 sm:py-24 max-w-4xl">
-            <h1 className="font-bold text-gray-900 leading-tight text-[2.5rem] sm:text-5xl md:text-6xl text-center">
-              <span className="block fade-in-up" style={{ color: '#2FC774' }}>SHAED</span>
-              <span className="block text-[0.65em] leading-none my-1 sm:my-2 fade-in-up" style={{ animationDelay: '120ms', color: '#2FC774' }}>x</span>
+            <h1 className="font-bold text-gray-100 leading-tight text-[2.5rem] sm:text-5xl md:text-6xl text-center">
+              <span className="block fade-in-up text-[color:#3B8C7D]">SHAED</span>
+              <span className="block text-[0.65em] leading-none my-1 sm:my-2 fade-in-up text-[color:#3B8C7D]" style={{ animationDelay: '120ms' }}>x</span>
               <span className="relative block h-[1.2em] mt-0 w-full">
                 {words.map((word, index) => (
                   <span
                     key={word}
-                    className="absolute inset-0 w-full opacity-0 rotate-word flex items-center justify-center"
-                    style={{ animationDelay: `${index * 3}s`, color: '#2FC774' }}
+                    className="absolute inset-0 w-full opacity-0 rotate-word flex items-center justify-center text-[color:#3B8C7D]"
+                    style={{ animationDelay: `${index * 3}s` }}
                   >
                     {word}
                   </span>

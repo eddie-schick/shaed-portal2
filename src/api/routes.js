@@ -161,7 +161,7 @@ export const exportPDFQuote = async (buildData) => {
   // Fetch and convert logo to base64 data URL
   let logoDataUrl = ''
   try {
-    const logoUrl = '/SHAED Logo.png'
+    const logoUrl = '/SHAED Logo - Updated.png'
     const response = await fetch(logoUrl)
     if (response.ok) {
       const blob = await response.blob()

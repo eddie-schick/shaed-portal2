@@ -250,7 +250,7 @@ function PaperX() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col items-center justify-center text-center">
                   <p className="text-sm sm:text-base text-gray-600 mb-2">Documents Processed</p>
-                  <p className="text-3xl sm:text-4xl font-bold">79,834</p>
+                  <p className="text-3xl sm:text-4xl font-bold">160,879</p>
                 </div>
               </CardContent>
             </Card>
@@ -260,7 +260,7 @@ function PaperX() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col items-center justify-center text-center">
                   <p className="text-sm sm:text-base text-gray-600 mb-2">Files Uploaded</p>
-                  <p className="text-3xl sm:text-4xl font-bold">11,039</p>
+                  <p className="text-3xl sm:text-4xl font-bold">27,724</p>
                 </div>
               </CardContent>
             </Card>
@@ -270,7 +270,7 @@ function PaperX() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col items-center justify-center text-center">
                   <p className="text-sm sm:text-base text-gray-600 mb-2">Total Requests</p>
-                  <p className="text-3xl sm:text-4xl font-bold">1,683</p>
+                  <p className="text-3xl sm:text-4xl font-bold">3,214</p>
                 </div>
               </CardContent>
             </Card>
@@ -280,7 +280,7 @@ function PaperX() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex flex-col items-center justify-center text-center">
                   <p className="text-sm sm:text-base text-gray-600 mb-2">Success Rate</p>
-                  <p className="text-3xl sm:text-4xl font-bold">{(100 - (112 / 79834) * 100).toFixed(2)}%</p>
+                  <p className="text-3xl sm:text-4xl font-bold">99.89%</p>
                 </div>
               </CardContent>
             </Card>
@@ -836,7 +836,7 @@ async function generateDemoPDF(documentName, fileName, order, documentId) {
   // Fetch and convert logo to base64 data URL (same as configurator)
   let logoDataUrl = ''
   try {
-    const logoUrl = '/SHAED Logo.png'
+    const logoUrl = '/SHAED Logo - Updated.png'
     const response = await fetch(logoUrl)
     if (response.ok) {
       const blob = await response.blob()

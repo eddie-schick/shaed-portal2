@@ -59,12 +59,12 @@ function CompletedUnitCard({ chassis, bodyType, imageSrc, isExact }) {
   const fitContain = chassis === 'F-450' && bodyType === 'Refrigerated Body'
 
   return (
-    <Card className={`hover:shadow-lg transition-shadow ${isExact ? 'ring-2 ring-green-500' : ''}`}>
+    <Card className={`hover:shadow-lg transition-shadow ${isExact ? 'ring-2 ring-primary' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">{chassis} + {bodyType}</CardTitle>
           {isExact && (
-            <Badge className="bg-green-100 text-green-800 border-green-200">
+            <Badge className="bg-primary/10 text-primary border-primary/20">
               <CheckCircle className="w-3 h-3 mr-1" />
               Your Build
             </Badge>
@@ -224,7 +224,7 @@ export function CompletedUnitsGallery({
           <div className="mt-4 text-center text-sm text-gray-600">
             <Eye className="w-4 h-4 inline mr-1" />
             {relevantImages.filter(img => img.isExact).length > 0 
-              ? 'Green border shows your exact configuration'
+              ? 'Teal border shows your exact configuration'
               : 'Select chassis and body type to see your exact build'}
           </div>
         )}
@@ -264,10 +264,10 @@ export function CompletedUnitsPreview({ selectedChassis, selectedBodyType, class
   if (!exactImage) return null
 
   return (
-    <Card className={`${className} bg-green-50 border-green-200`}>
+    <Card className={`${className} bg-primary/5 border-2 border-primary`}>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-600" />
+          <CheckCircle className="w-4 h-4 text-primary" />
           Your Build Preview
         </CardTitle>
       </CardHeader>
@@ -306,7 +306,7 @@ export function CompletedUnitsPreview({ selectedChassis, selectedBodyType, class
             <div className="absolute inset-0 bg-gray-100 rounded-lg animate-pulse" />
           )}
         </AspectRatio>
-        <div className="text-xs text-green-700 mt-2 text-center">
+        <div className="text-xs text-primary mt-2 text-center">
           {selectedChassis} + {selectedBodyType}
         </div>
       </CardContent>

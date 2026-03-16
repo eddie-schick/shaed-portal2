@@ -24,8 +24,8 @@ function usePrefersReducedMotion() {
 
 export default function Hero({
 	rotatingWords = ["Customers", "Dealers", "Upfitters", "Fleets"],
-	ctaPrimary = { label: "Explore Catalog", href: "/" },
-	ctaSecondary = { label: "Order Management", href: "/ordermanagement" },
+	ctaPrimary = { label: "Shop", href: "/" },
+	ctaSecondary = { label: "Track", href: "/ordermanagement" },
 	showSearch = true,
 }) {
 	// reference props to avoid unused warnings while preserving API
@@ -151,13 +151,13 @@ export default function Hero({
 					<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 						<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 sm:justify-center">
 							<Button asChild size="lg" variant="outline" className="w-full sm:w-auto sm:min-w-40 bg-white text-gray-900 hover:bg-white/90 shadow-lg text-sm sm:text-base py-2.5 sm:py-3">
-								<a href="#catalog" onClick={handleExploreClick} aria-label="Explore Catalog">Explore Catalog</a>
+								<a href="#catalog" onClick={handleExploreClick} aria-label="Shop">Shop</a>
 							</Button>
 							<Button asChild size="lg" variant="outline" className="w-full sm:w-auto sm:min-w-40 bg-white text-gray-900 hover:bg-white/90 shadow-lg text-sm sm:text-base py-2.5 sm:py-3">
-								<Link to="/ordermanagement" onClick={handleNavClick} aria-label="Go to Order Management">Order Management</Link>
+								<Link to="/ordermanagement" onClick={handleNavClick} aria-label="Go to Track">Track</Link>
 							</Button>
 							<Button asChild size="lg" variant="outline" className="w-full sm:w-auto sm:min-w-40 bg-white text-gray-900 hover:bg-white/90 shadow-lg text-sm sm:text-base py-2.5 sm:py-3">
-								<Link to="/documentation" onClick={handleNavClick} aria-label="Go to Documentation">Documentation</Link>
+								<Link to="/documentation" onClick={handleNavClick} aria-label="Go to Document">Document</Link>
 							</Button>
 						</div>
 					</div>

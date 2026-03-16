@@ -1824,6 +1824,17 @@ export function OrderDetailPage() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Mobile Close Button */}
+          <div className="sm:hidden mt-4 pt-4 border-t">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowTrackingModal(false)}
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
